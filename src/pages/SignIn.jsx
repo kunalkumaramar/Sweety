@@ -158,9 +158,10 @@ const SignIn = ({ isOpen, onClose, initialMode = "login" }) => {
 };
 
   const handleGoogleLogin = async () => {
-    console.log("Google login clicked");
-    // Implement Google OAuth integration
-    window.open(`${import.meta.env.VITE_API_BASE_URL}/auth/google`, '_blank');
+    const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=email profile&access_type=offline`;
+    window.location.href = googleAuthUrl;
   };
 
   const handleContinueAsGuest = () => {

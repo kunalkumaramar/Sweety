@@ -26,6 +26,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Checkout from "./components/Checkout";
 import { SmoothCursor } from "./components/SmoothCursor";
+import GoogleCallback from "./components/GoogleCallback";
 
 // Context Providers
 import { CartProvider } from "./components/CartContext";
@@ -77,6 +78,7 @@ function App() {
                 <Route path="/blogs" element={<Blogs />} />
 
                 {/* Auth routes (can be removed as SignIn modal handles both) */}
+                <Route path="/auth/google/callback" element={<GoogleCallback />} />
                 <Route path="/login" element={<div>Login Page - Use SignIn Modal Instead</div>} />
                 <Route path="/register" element={<div>Register Page - Use SignIn Modal Instead</div>} />
 
