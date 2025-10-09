@@ -37,50 +37,24 @@ const HeroSlider = () => {
     );
   };
 
-  // Function to normalize URL - add https:// if missing
-  const normalizeUrl = (url) => {
-    if (!url) return null;
-    
-    // Trim whitespace
-    url = url.trim();
-    
-    // Check if URL already has a protocol
-    if (!/^(?:f|ht)tps?:\/\//i.test(url)) {
-      // Add https:// if no protocol exists
-      url = 'https://' + url;
-    }
-    
-    return url;
-  };
-
-  // Function to check if URL is external
-  const isExternalUrl = (url) => {
-    if (!url) return false;
-    
-    try {
-      const normalizedUrl = normalizeUrl(url);
-      const urlObj = new URL(normalizedUrl);
-      const currentHost = window.location.hostname;
-      
-      // Compare hostnames to determine if external
-      return urlObj.hostname !== currentHost;
-    } catch (e) {
-      return false;
-    }
-  };
-
   const handleBannerClick = (link) => {
     if (!link) return;
     
-    // Normalize the URL first
-    const normalizedLink = normalizeUrl(link);
+    // Trim whitespace
+    link = link.trim();
     
-    // Check if it's an external URL
-    if (isExternalUrl(link)) {
-      // Open external links in new tab
-      window.open(normalizedLink, '_blank', 'noopener,noreferrer');
+    // Check if the link starts with http:// or https://
+    const hasProtocol = /^https?:\/\//i.test(link);
+    
+    if (hasProtocol) {
+      // It's an absolute URL - always open in new tab
+      window.open(link, '_blank', 'noopener,noreferrer');
+    } else if (link.startsWith('www.') || /^[a-zA-Z0-9][a-zA-Z0-9-]+\.[a-zA-Z]{2,}/.test(link)) {
+      // It's a domain without protocol (like www.google.com or google.com)
+      // Add https:// and open in new tab
+      window.open('https://' + link, '_blank', 'noopener,noreferrer');
     } else {
-      // Internal navigation using React Router
+      // It's a relative/internal path - use React Router
       const cleanLink = link.startsWith('/') ? link : `/${link}`;
       navigate(cleanLink);
     }
