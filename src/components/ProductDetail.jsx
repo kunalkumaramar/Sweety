@@ -53,6 +53,7 @@ const ProductDetail = () => {
   const [itemsPerPage, setItemsPerPage] = useState(4);
   const [addingToCart, setAddingToCart] = useState(false);
   const [addingToWishlist, setAddingToWishlist] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 }); // Added for zoom origin
 
   // Refs
   const sectionRef = useRef(null);
@@ -552,411 +553,408 @@ const ProductDetail = () => {
 
   // Get current images based on selected color
   const currentImages = selectedColor?.images || [];
-  const currentImage = currentImages[currentImageIndex] || "";
-
-  const handleNextImage = () => {
-    setCurrentImageIndex((prev) =>
-      prev === currentImages.length - 1 ? 0 : prev + 1
-    );
-  };
+  const currentImage = currentImages[currentImageIndex] || currentImages[0] || "";
 
   const handlePrevImage = () => {
-    setCurrentImageIndex((prev) =>
-      prev === 0 ? currentImages.length - 1 : prev - 1
-    );
+    setCurrentImageIndex((prev) => (prev === 0 ? currentImages.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % currentImages.length);
+  };
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomOrigin({ x, y });
+  };
+
+  const handleMouseLeave = () => {
+    setZoomOrigin({ x: 50, y: 50 });
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <section
         ref={sectionRef}
-        className="product-detail-section py-8 md:py-12 bg-white"
+        className="container mx-auto px-4 md:px-6 lg:px-12 py-8 md:py-12"
       >
-        <div className="container mx-auto px-4 md:px-6 lg:px-12">
-          {/* Breadcrumbs */}
-          {getBreadcrumbData() && (
-            <nav className="text-sm text-gray-600 mb-6 md:mb-8">
-              <Link to="/">Home</Link> &gt;{" "}
-              <Link to={`/products/${getBreadcrumbData().categorySlug}`}>
-                {getBreadcrumbData().categoryName}
-              </Link>{" "}
-              {getBreadcrumbData().subcategoryName && (
-                <>
-                  &gt;{" "}
-                  <Link
-                    to={`/products/${getBreadcrumbData().categorySlug}/${getBreadcrumbData().subcategorySlug}`}
+        {/* Breadcrumbs */}
+        <div className="mb-6 text-sm">
+          <Link to="/">Home</Link> &gt; <Link to="/products">Products</Link> &gt; {currentProduct.name}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
+          {/* Left: Images */}
+          <div className="order-1 lg:order-1">
+            {/* Desktop Layout - Thumbnails on left */}
+            <div className="hidden lg:flex gap-4">
+              <div className="flex flex-col gap-2 w-24">
+                {currentImages.slice(0, 4).map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCurrentImageIndex(idx)}
+                    className={`border-2 ${
+                      currentImageIndex === idx ? "border-gray-800" : "border-gray-200"
+                    } rounded-lg overflow-hidden relative`}
                   >
-                    {getBreadcrumbData().subcategoryName}
-                  </Link>
-                </>
-              )}{" "}
-              &gt; <span>{currentProduct.name}</span>
-            </nav>
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
-            {/* Left: Images */}
-            <div className="order-1 lg:order-1">
-              {/* Desktop Layout - Thumbs on left */}
-              <div className="hidden lg:flex gap-4">
-                <div className="flex flex-col gap-2 w-28">
-                  {currentImages.slice(0, 4).map((img, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setCurrentImageIndex(idx)}
-                      className={`border-2 ${
-                        currentImageIndex === idx
-                          ? "border-gray-800"
-                          : "border-gray-200"
-                      } rounded-lg overflow-hidden relative`}
-                    >
-                      <img
-                        src={img}
-                        alt={`thumb-${idx}`}
-                        className="w-full h-[142px] object-cover"
-                      />
-                      {idx === 3 && currentImages.length > 4 && (
-                        <div className="absolute inset-0 bg-black/40 backdrop-blur-none flex items-center justify-center rounded-lg text-white text-lg font-medium">
-                          +{currentImages.length - 4}
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="relative flex-1">
-                  <img
-                    src={currentImage || ""}
-                    alt={`${currentProduct.name} - ${selectedColor?.colorName}`}
-                    className="w-full h-[600px] object-cover rounded-lg"
-                  />
-
-                  {/* Desktop arrows */}
-                  {currentImages.length > 1 && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePrevImage();
-                        }}
-                        aria-label="Previous image"
-                        className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-pink-500 text-gray-800 hover:text-white transition-all duration-200 p-2 rounded-full shadow-md"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleNextImage();
-                        }}
-                        aria-label="Next image"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-pink-500 text-gray-800 hover:text-white transition-all duration-200 p-2 rounded-full shadow-md"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </>
-                  )}
-                </div>
+                    <img
+                      src={img}
+                      alt={`thumb-${idx}`}
+                      className="w-full h-32 object-cover"
+                    />
+                    {idx === 3 && currentImages.length > 4 && (
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-none flex items-center justify-center rounded-lg text-white text-lg font-medium">
+                        +{currentImages.length - 4}
+                      </div>
+                    )}
+                  </button>
+                ))}
               </div>
 
-              {/* Mobile Layout - Stacked */}
-              <div className="lg:hidden">
-                <div className="w-full mb-4 relative">
-                  <img
-                    src={currentImage || ""}
-                    alt={`${currentProduct.name} - ${selectedColor?.colorName}`}
-                    className="w-full h-[400px] md:h-[500px] object-cover rounded-lg"
-                  />
+              <div
+                className="relative flex-1 overflow-hidden rounded-lg"
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+              >
+                <img
+                  src={currentImage || ""}
+                  alt={`${currentProduct.name} - ${selectedColor?.colorName}`}
+                  className="w-full h-[690px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in"
+                  style={{ transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%` }}
+                />
 
-                  {/* Mobile arrows centered below main image */}
-                  {currentImages.length > 1 && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex justify-center gap-4">
-                      <button
-                        type="button"
-                        onClick={handlePrevImage}
-                        className="bg-white/90 hover:bg-pink-500 text-gray-700 hover:text-white p-2 rounded-full transition-all duration-200 shadow-md"
-                        aria-label="Previous image"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleNextImage}
-                        className="bg-white/90 hover:bg-pink-500 text-gray-700 hover:text-white p-2 rounded-full transition-all duration-200 shadow-md"
-                        aria-label="Next image"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Thumbnails - show up to 4; last thumbnail shows +N if more */}
-                <div className="flex gap-2 justify-center px-2">
-                  {currentImages.slice(0, 4).map((img, idx) => (
+                {/* Desktop arrows */}
+                {currentImages.length > 1 && (
+                  <>
                     <button
-                      key={idx}
                       type="button"
-                      onClick={() => setCurrentImageIndex(idx)}
-                      className={`border-2 ${
-                        currentImageIndex === idx
-                          ? "border-gray-800"
-                          : "border-gray-200"
-                      } rounded-lg overflow-hidden flex-shrink-0 relative`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePrevImage();
+                      }}
+                      aria-label="Previous image"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-pink-500 text-gray-800 hover:text-white transition-all duration-200 p-2 rounded-full shadow-md"
                     >
-                      <img
-                        src={img}
-                        alt={`thumb-${idx}`}
-                        className="w-16 h-20 sm:w-20 sm:h-24 object-cover"
-                      />
-                      {idx === 3 && currentImages.length > 4 && (
-                        <div className="absolute inset-0 bg-black/40 backdrop-blur-none flex items-center justify-center rounded-lg text-white text-sm font-medium">
-                          +{currentImages.length - 4}
-                        </div>
-                      )}
+                      <ChevronLeft className="w-5 h-5" />
                     </button>
-                  ))}
-                </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNextImage();
+                      }}
+                      aria-label="Next image"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-pink-500 text-gray-800 hover:text-white transition-all duration-200 p-2 rounded-full shadow-md"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Right: Details */}
-            <div className="order-2 lg:order-2 space-y-4 lg:space-y-6">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                {currentProduct.name}
-              </h2>
-
-              {/* NEW: Subheading */}
-              {currentProduct.subheading && (
-                <p className="text-lg text-gray-600 font-bold">
-                  {currentProduct.subheading}
-                </p>
-              )}
-
-              {/* Reviews Summary */}
-              <div className="mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <svg
-                        key={star}
-                        className="w-5 h-5 text-pink-600 fill-current"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                  </div>
-                  {currentProduct.ratings && currentProduct.ratings.length > 0 && (
-                    <>
-                      <span className="ml-2 text-sm text-gray-600">
-                        ({currentProduct.ratings.length} review
-                        {currentProduct.ratings.length !== 1 ? "s" : ""})
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        {(
-                          currentProduct.ratings.reduce(
-                            (acc, rating) => acc + (rating.rating || rating),
-                            0
-                          ) / currentProduct.ratings.length
-                        ).toFixed(1)}{" "}
-                        out of 5
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 flex-wrap">
-                <p className="text-xl md:text-2xl font-bold">
-                  ₹{currentProduct.price}
-                </p>
-                {currentProduct.originalPrice && (
-                  <p className="text-lg md:text-xl text-gray-500 line-through">
-                    ₹{currentProduct.originalPrice}
-                  </p>
-                )}
-                {discount > 0 && (
-                  <span className="bg-pink-500 text-white text-sm px-3 py-1 rounded-full">
-                    {discount}% OFF
-                  </span>
-                )}
-              </div>
-
-              {currentProduct.description && (
-                <p className="text-gray-600 text-sm md:text-base">
-                  {currentProduct.description}
-                </p>
-              )}
-
-              {/* Colors */}
-              {currentProduct.colors && currentProduct.colors.length > 0 && (
-                <div>
-                  <p className="font-bold mb-2 text-sm md:text-base ">
-                    Color: {selectedColor?.colorName}
-                  </p>
-                  <div className="flex gap-2 md:gap-3 flex-wrap ">
-                    {currentProduct.colors.map((color, idx) => (
-                      <button
-                        key={color._id}
-                        onClick={() => handleColorChange(idx)}
-                        className={`w-12 h-12 md:w-14 md:h-14 border-2 rounded-lg flex items-center justify-center p-1 ${
-                          selectedColorIndex === idx
-                            ? "border-black"
-                            : "border-gray-300 hover:border-gray-400"
-                        }`}
-                      >
-                        <ColorCircle
-                          color={color}
-                          size="w-8 h-8 md:w-10 md:h-10"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Sizes */}
-              {selectedColor?.sizeStock && selectedColor.sizeStock.length > 0 && (
-                <div>
-                  <p className="font-bold mb-2 text-sm md:text-base">
-                    Size: {selectedSize}
-                  </p>
-                  {sizesLoading ? (
-                    <div className="text-sm text-gray-500">Loading sizes...</div>
-                  ) : (
-                    <div className="flex gap-2 md:gap-3 flex-wrap ">
-                      {selectedColor.sizeStock.map((sizeObj, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedSize(sizeObj.size)}
-                          disabled={sizeObj.stock === 0}
-                          className={`px-3 py-2 md:px-4 md:py-2 border-2 font-medium text-sm md:text-base rounded-md ${
-                            selectedSize === sizeObj.size
-                              ? "bg-pink-600 text-white border-pink-600"
-                              : sizeObj.stock === 0
-                              ? "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
-                              : "bg-white text-black border-gray-300 hover:border-gray-400"
-                          }`}
-                        >
-                          {sizeObj.size.toUpperCase()}
-                          {sizeObj.stock === 0 && (
-                            <span className="block text-xs">Out of Stock</span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Size Chart Link */}
-              {currentProduct.sizeChart && (
-                <div>
-                  <a
-                    href={currentProduct.sizeChart}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-pink-600 hover:text-pink-700 text-sm underline"
-                  >
-                    View Size Chart
-                  </a>
-                </div>
-              )}
-
-              {/* Quantity + Cart */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
-                <div className="flex items-center border-2 rounded w-fit bg-gray-200">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="px-3 py-2  hover:bg-gray-100"
-                  >
-                    -
-                  </button>
-                  <span className="px-4 py-2 min-w-[3rem] text-center">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="px-3 py-2 hover:bg-gray-100"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="flex gap-2 flex-1">
-                  <button
-                    className="flex-1 bg-black text-white py-3 px-4 md:px-6 hover:bg-gray-800 rounded text-sm md:text-base disabled:bg-gray-400"
-                    onClick={handleAddToCart}
-                    disabled={!selectedSize || !selectedColor || addingToCart}
-                  >
-                    {addingToCart ? "Adding..." : "Add To Cart"}
-                  </button>
-
-                  <button
-                    onClick={handleWishlistToggle}
-                    disabled={addingToWishlist}
-                    className={`p-3 border rounded-full transition ${
-                      isInWishlist
-                        ? "bg-pink-100 border-pink-400 text-pink-600"
-                        : "border-gray-300 hover:bg-gray-100"
-                    } ${addingToWishlist ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill={isInWishlist ? "currentColor" : "none"}
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <button
-                onClick={handleBuyNow}
-                className="w-full bg-pink-600 text-white py-3 rounded hover:bg-pink-700 text-sm md:text-base disabled:bg-gray-400"
-                disabled={!selectedSize || !selectedColor || addingToCart}
+            {/* Mobile Layout - Stacked */}
+            <div className="lg:hidden">
+              <div
+                className="w-full mb-4 relative overflow-hidden rounded-lg"
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
               >
-                {addingToCart ? "Processing..." : "Buy It Now"}
-              </button>
+                <img
+                  src={currentImage || ""}
+                  alt={`${currentProduct.name} - ${selectedColor?.colorName}`}
+                  className="w-full h-[400px] md:h-[500px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in"
+                  style={{ transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%` }}
+                />
+
+                {/* Mobile arrows centered below main image */}
+                {currentImages.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex justify-center gap-4">
+                    <button
+                      type="button"
+                      onClick={handlePrevImage}
+                      className="bg-white/90 hover:bg-pink-500 text-gray-700 hover:text-white p-2 rounded-full transition-all duration-200 shadow-md"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextImage}
+                      className="bg-white/90 hover:bg-pink-500 text-gray-700 hover:text-white p-2 rounded-full transition-all duration-200 shadow-md"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Thumbnails - show up to 4; last thumbnail shows +N if more */}
+              <div className="flex gap-2 justify-center px-2">
+                {currentImages.slice(0, 4).map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCurrentImageIndex(idx)}
+                    className={`border-2 ${
+                      currentImageIndex === idx
+                        ? "border-gray-800"
+                        : "border-gray-200"
+                    } rounded-lg overflow-hidden flex-shrink-0 relative`}
+                  >
+                    <img
+                      src={img}
+                      alt={`thumb-${idx}`}
+                      className="w-16 h-20 sm:w-20 sm:h-24 object-cover"
+                    />
+                    {idx === 3 && currentImages.length > 4 && (
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-none flex items-center justify-center rounded-lg text-white text-sm font-medium">
+                        +{currentImages.length - 4}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Moved Specifications Table here for full-width layout */}
-          {currentProduct.specifications && currentProduct.specifications.length > 0 && (
-            <div className="mt-6 lg:mt-12">
-              <table className="w-full border-collapse bg-[#f9e2e7] rounded-lg overflow-hidden">
-                <tbody>
-                  {[...currentProduct.specifications]
-                    .sort((a, b) => a.order - b.order)
-                    .map((spec, index) => (
-                      <tr 
-                        key={spec._id} 
-                        className="bg-[#f9e2e7]"
-                      >
-                        <td className="py-3 px-4 font-semibold text-base text-gray-800 align-top" style={{ width: '180px' }}>
-                          {spec.label}
-                        </td>
-                        <td className="py-3 px-4 text-base text-gray-700">
-                          {spec.description}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+          {/* Right: Details */}
+          <div className="order-2 lg:order-2 space-y-4 lg:space-y-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+              {currentProduct.name}
+            </h2>
+
+            {/* NEW: Subheading */}
+            {currentProduct.subheading && (
+              <p className="text-lg text-gray-600 font-bold">
+                {currentProduct.subheading}
+              </p>
+            )}
+
+            {/* Reviews Summary */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2">
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <svg
+                      key={star}
+                      className="w-5 h-5 text-pink-600 fill-current"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+                {currentProduct.ratings && currentProduct.ratings.length > 0 && (
+                  <>
+                    <span className="ml-2 text-sm text-gray-600">
+                      ({currentProduct.ratings.length} review
+                      {currentProduct.ratings.length !== 1 ? "s" : ""})
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {(
+                        currentProduct.ratings.reduce(
+                          (acc, rating) => acc + (rating.rating || rating),
+                          0
+                        ) / currentProduct.ratings.length
+                      ).toFixed(1)}{" "}
+                      out of 5
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
-          )}
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <p className="text-xl md:text-2xl font-bold">
+                ₹{currentProduct.price}
+              </p>
+              {currentProduct.originalPrice && (
+                <p className="text-lg md:text-xl text-gray-500 line-through">
+                  ₹{currentProduct.originalPrice}
+                </p>
+              )}
+              {discount > 0 && (
+                <span className="bg-pink-500 text-white text-sm px-3 py-1 rounded-full">
+                  {discount}% OFF
+                </span>
+              )}
+            </div>
+
+            {currentProduct.description && (
+              <p className="text-gray-600 text-sm md:text-base">
+                {currentProduct.description}
+              </p>
+            )}
+
+            {/* Colors */}
+            {currentProduct.colors && currentProduct.colors.length > 0 && (
+              <div>
+                <p className="font-bold mb-2 text-sm md:text-base ">
+                  Color: {selectedColor?.colorName}
+                </p>
+                <div className="flex gap-2 md:gap-3 flex-wrap ">
+                  {currentProduct.colors.map((color, idx) => (
+                    <button
+                      key={color._id}
+                      onClick={() => handleColorChange(idx)}
+                      className={`w-12 h-12 md:w-14 md:h-14 border-2 rounded-lg flex items-center justify-center p-1 ${
+                        selectedColorIndex === idx
+                          ? "border-black"
+                          : "border-gray-300 hover:border-gray-400"
+                      }`}
+                    >
+                      <ColorCircle
+                        color={color}
+                        size="w-8 h-8 md:w-10 md:h-10"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sizes */}
+            {selectedColor?.sizeStock && selectedColor.sizeStock.length > 0 && (
+              <div>
+                <p className="font-bold mb-2 text-sm md:text-base">
+                  Size: {selectedSize}
+                </p>
+                {sizesLoading ? (
+                  <div className="text-sm text-gray-500">Loading sizes...</div>
+                ) : (
+                  <div className="flex gap-2 md:gap-3 flex-wrap ">
+                    {selectedColor.sizeStock.map((sizeObj, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedSize(sizeObj.size)}
+                        disabled={sizeObj.stock === 0}
+                        className={`px-3 py-2 md:px-4 md:py-2 border-2 font-medium text-sm md:text-base rounded-md ${
+                          selectedSize === sizeObj.size
+                            ? "bg-pink-600 text-white border-pink-600"
+                            : sizeObj.stock === 0
+                            ? "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+                            : "bg-white text-black border-gray-300 hover:border-gray-400"
+                        }`}
+                      >
+                        {sizeObj.size.toUpperCase()}
+                        {sizeObj.stock === 0 && (
+                          <span className="block text-xs">Out of Stock</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Size Chart Link */}
+            {currentProduct.sizeChart && (
+              <div>
+                <a
+                  href={currentProduct.sizeChart}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-pink-600 hover:text-pink-700 text-sm underline"
+                >
+                  View Size Chart
+                </a>
+              </div>
+            )}
+
+            {/* Quantity + Cart */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
+              <div className="flex items-center border-2 rounded w-fit bg-gray-200">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="px-3 py-2  hover:bg-gray-100"
+                >
+                  -
+                </button>
+                <span className="px-4 py-2 min-w-[3rem] text-center">
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="px-3 py-2 hover:bg-gray-100"
+                >
+                  +
+                </button>
+              </div>
+
+              <div className="flex gap-2 flex-1">
+                <button
+                  className="flex-1 bg-black text-white py-3 px-4 md:px-6 hover:bg-gray-800 rounded text-sm md:text-base disabled:bg-gray-400"
+                  onClick={handleAddToCart}
+                  disabled={!selectedSize || !selectedColor || addingToCart}
+                >
+                  {addingToCart ? "Adding..." : "Add To Cart"}
+                </button>
+
+                <button
+                  onClick={handleWishlistToggle}
+                  disabled={addingToWishlist}
+                  className={`p-3 border rounded-full transition ${
+                    isInWishlist
+                      ? "bg-pink-100 border-pink-400 text-pink-600"
+                      : "border-gray-300 hover:bg-gray-100"
+                  } ${addingToWishlist ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill={isInWishlist ? "currentColor" : "none"}
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={handleBuyNow}
+              className="w-full bg-pink-600 text-white py-3 rounded hover:bg-pink-700 text-sm md:text-base disabled:bg-gray-400"
+              disabled={!selectedSize || !selectedColor || addingToCart}
+            >
+              {addingToCart ? "Processing..." : "Buy It Now"}
+            </button>
+          </div>
         </div>
+
+        {/* Moved Specifications Table here for full-width layout */}
+        {currentProduct.specifications && currentProduct.specifications.length > 0 && (
+          <div className="mt-6 lg:mt-12">
+            <table className="w-full border-collapse bg-[#f9e2e7] rounded-lg overflow-hidden">
+              <tbody>
+                {[...currentProduct.specifications]
+                  .sort((a, b) => a.order - b.order)
+                  .map((spec, index) => (
+                    <tr 
+                      key={spec._id} 
+                      className="bg-[#f9e2e7]"
+                    >
+                      <td className="py-3 px-4 font-semibold text-base text-gray-800 align-top" style={{ width: '180px' }}>
+                        {spec.label}
+                      </td>
+                      <td className="py-3 px-4 text-base text-gray-700">
+                        {spec.description}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {/* Similar Products */}
