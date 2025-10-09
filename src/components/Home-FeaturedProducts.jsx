@@ -30,7 +30,7 @@ const CircularProductCard = React.memo(({
         transform: cardTransform.transform,
         opacity: cardTransform.opacity,
         zIndex: cardTransform.zIndex,
-        width: isMobile ? '240px' : '320px'
+        width: isMobile ? '160px' : '265px'
       }}
       onClick={() => onCardClick(product)}
     >
@@ -40,7 +40,7 @@ const CircularProductCard = React.memo(({
             <img
               src={product.colors?.[0]?.images?.[0] || product.images?.[0] || '/placeholder.png'}
               alt={product.name}
-              className="w-full h-48 sm:h-56 md:h-64 lg:h-72 object-cover transition-transform duration-300 hover:scale-105"
+              className="w-full h-auto max-h-72 object-contain transition-transform duration-300 hover:scale-105"  // <-- Changes here: h-auto, max-h-72, object-contain
             />
             <div className="absolute inset-0 bg-transparent bg-opacity-0 hover:bg-opacity-10 transition-all duration-300"></div>
           </div>

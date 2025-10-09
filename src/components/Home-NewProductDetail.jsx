@@ -528,23 +528,23 @@ const HomeProductDetailSection = () => {
           scrollbar-width: none;
         }
         @media (min-width: 475px) {
-          .xs\:text-2xl { font-size: 1.5rem; line-height: 2rem; }
-          .xs\:text-xl { font-size: 1.25rem; line-height: 1.75rem; }
-          .xs\:text-lg { font-size: 1.125rem; line-height: 1.75rem; }
-          .xs\:text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-          .xs\:w-11 { width: 2.75rem; }
-          .xs\:h-11 { height: 2.75rem; }
-          .xs\:w-7 { width: 1.75rem; }
-          .xs\:h-7 { height: 1.75rem; }
-          .xs\:h-320px { height: 320px; }
-          .xs\:w-16 { width: 4rem; }
-          .xs\:h-20 { height: 5rem; }
-          .xs\:px-3.5 { padding-left: 0.875rem; padding-right: 0.875rem; }
-          .xs\:py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
-          .xs\:w-5 { width: 1.25rem; }
-          .xs\:h-5 { height: 1.25rem; }
-          .xs\:flex-row { flex-direction: row; }
-          .xs\:mx-0 { margin-left: 0; margin-right: 0; }
+          .xs:text-2xl { font-size: 1.5rem; line-height: 2rem; }
+          .xs:text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+          .xs:text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+          .xs:text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+          .xs:w-11 { width: 2.75rem; }
+          .xs:h-11 { height: 2.75rem; }
+          .xs:w-7 { width: 1.75rem; }
+          .xs:h-7 { height: 1.75rem; }
+          .xs:h-320px { height: 320px; }
+          .xs:w-16 { width: 4rem; }
+          .xs:h-20 { height: 5rem; }
+          .xs:px-3.5 { padding-left: 0.875rem; padding-right: 0.875rem; }
+          .xs:py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+          .xs:w-5 { width: 1.25rem; }
+          .xs:h-5 { height: 1.25rem; }
+          .xs:flex-row { flex-direction: row; }
+          .xs:mx-0 { margin-left: 0; margin-right: 0; }
         }
       `}</style>
     </section>
