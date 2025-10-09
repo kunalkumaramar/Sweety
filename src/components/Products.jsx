@@ -536,7 +536,7 @@ const Products = ({
 
         <div className="p-3">
           {/* 1. Available Colors Display */}
-          <div className="flex items-center gap-1 mb-2">
+          {/* <div className="flex items-center gap-1 mb-2">
             <div className="flex gap-1">
               {product.colors?.slice(0, 5).map((color, index) => (
                 <button
@@ -560,7 +560,7 @@ const Products = ({
                 </span>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* 2. Category Name */}
           {productCategoryName && (
@@ -761,12 +761,12 @@ const Products = ({
             </span>
             <div className="bg-white rounded-sm border flex-1 p-3">
               <div className="grid grid-cols-2 gap-2 mb-3">
-                <FilterDropdown
+                {/* <FilterDropdown
                   label="Color"
                   options={getUniqueValues("colors")}
                   value={filters.color}
                   onChange={(value) => handleFilterChange("color", value)}
-                />
+                /> */}
                 <FilterDropdown
                   label="Size"
                   options={getUniqueValues("sizes")}
@@ -820,12 +820,12 @@ const Products = ({
               </span>
               <div className="bg-white rounded-sm border-2 flex-1">
                 <div className="flex justify-evenly flex-wrap gap-2">
-                  <FilterDropdown
+                  {/* <FilterDropdown
                     label="Color"
                     options={getUniqueValues("colors")}
                     value={filters.color}
                     onChange={(value) => handleFilterChange("color", value)}
-                  />
+                  /> */}
                   <FilterDropdown
                     label="Size"
                     options={getUniqueValues("sizes")}

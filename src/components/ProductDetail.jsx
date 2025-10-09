@@ -797,7 +797,7 @@ const ProductDetail = () => {
                 <p className="font-bold mb-2 text-sm md:text-base ">
                   Color: {selectedColor?.colorName}
                 </p>
-                <div className="flex gap-2 md:gap-3 flex-wrap ">
+                {/* <div className="flex gap-2 md:gap-3 flex-wrap ">
                   {currentProduct.colors.map((color, idx) => (
                     <button
                       key={color._id}
@@ -814,7 +814,7 @@ const ProductDetail = () => {
                       />
                     </button>
                   ))}
-                </div>
+                </div> */}
               </div>
             )}
 

@@ -17,7 +17,7 @@ const Footer = () => {
   }, []);
 
   return (
-    <footer className="bg-gray-100 mt-8 md:mt-12">
+    <footer className="bg-[#F9E2E7] mt-8 md:mt-12">
       <div
         ref={footerRef}
         className="container mx-auto px-4 sm:px-6 lg:px-16 py-8 sm:py-10 md:py-12"
