@@ -54,6 +54,13 @@ class ApiService {
   // ========================================================================
   // AUTH APIs
   // ========================================================================
+  async googleAuth(googleData) {
+    return this.request('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(googleData),
+    });
+  }
+  
   async login(email, password) {
     return this.request('/auth/login', {
       method: 'POST',
