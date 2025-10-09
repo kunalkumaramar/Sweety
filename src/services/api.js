@@ -60,7 +60,7 @@ class ApiService {
       body: JSON.stringify(googleData),
     });
   }
-  
+
   async login(email, password) {
     return this.request('/auth/login', {
       method: 'POST',
@@ -419,6 +419,17 @@ class ApiService {
    */
   async getBlogById(blogId) {
     return this.request(`/blog/${blogId}`);
+  }
+  // ========================================================================
+  // BANNER APIs
+  // ========================================================================
+  
+  /**
+   * Get all banners
+   * @returns {Promise} Promise with all banners data
+   */
+  async getBanners() {
+    return this.request('/banner');
   }
 }
 

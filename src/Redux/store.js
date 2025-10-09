@@ -10,7 +10,7 @@ import authReducer from './slices/authSlice';
 import ordersReducer from './slices/ordersSlice';
 import paymentReducer from './slices/paymentSlice';
 import blogsReducer from "./slices/blogsSlice";
-
+import bannerReducer from './slices/bannerSlice';
 export const store = configureStore({
   reducer: {
     products: productsReducer,
@@ -22,6 +22,7 @@ export const store = configureStore({
     orders: ordersReducer,
     payment: paymentReducer,
     blogs: blogsReducer,
+    banners: bannerReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
