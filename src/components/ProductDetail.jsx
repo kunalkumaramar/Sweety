@@ -16,6 +16,7 @@ import { getSubcategoriesByCategory } from "../Redux/slices/subcategorySlice";
 import { useCart } from "../components/CartContext";
 import { useWishlist } from "../components/WishlistContext";
 
+
 const ProductDetail = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
