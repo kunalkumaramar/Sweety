@@ -22,7 +22,7 @@ const Banner = () => {
   }, []);
 
   return (
-    <div className="bg-black text-white py-1 my-2 overflow-hidden relative">
+    <div className="bg-[#f06292] text-white py-1 my-2 overflow-hidden relative">
       <div ref={bannerRef} className="flex whitespace-nowrap">
         {/* Track 1 */}
         {Array(20)
