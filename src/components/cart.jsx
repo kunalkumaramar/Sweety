@@ -1,4 +1,3 @@
-// cart.jsx 
 import { useSelector } from 'react-redux';
 import { useCart } from "../hooks/useCart";
 import { useWishlist } from "./WishlistContext";
@@ -6,6 +5,7 @@ import { apiService } from '../services/api';
 import { useNavigate } from "react-router-dom";
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
+import SignIn from "../pages/SignIn";
   
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
@@ -473,8 +473,11 @@ const CouponSection = ({ onApplyDiscount, onRemoveDiscount, hasDiscount, applied
   );
 };
 
+// Main Cart Component
 const Cart = () => {
   const navigate = useNavigate();
+  const [showSignIn, setShowSignIn] = useState(false);
+  const auth = useSelector((state) => state.auth);
 
   const { 
     items: cartItems, 
@@ -494,6 +497,17 @@ const Cart = () => {
     loading,
     isAuthenticated
   } = useCart();
+
+  const handleProceedToBuy = async () => {
+    if (!cartItems.length) return;
+    
+    const token = localStorage.getItem('token');
+    if (!token || !auth.isAuthenticated) {
+      setShowSignIn(true);
+    } else {
+      navigate('/checkout');
+    }
+  };
   
   const { addToWishlist } = useWishlist();
   const containerRef = useRef(null);
@@ -632,16 +646,20 @@ const Cart = () => {
       {/* Mobile Layout */}
       <div className="lg:hidden p-3 pb-24" ref={containerRef}>
         {/* Auth Status Indicator */}
-        {!isAuthenticated && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-            <div className="text-yellow-800 text-sm">
-              <span className="font-medium">Guest Mode:</span> Your cart will be saved temporarily. 
-              <a href="/login" className="underline ml-1">Login</a> to save permanently.
-            </div>
-          </div>
-        )}
-
-        {/* Summary */}
+            {!isAuthenticated && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <div className="text-yellow-800 text-sm">
+                  <span className="font-medium">Guest Mode:</span> Your cart will be saved temporarily. 
+                  <button 
+                    onClick={() => setShowSignIn(true)} 
+                    className="underline ml-1 text-pink-600 hover:text-pink-700"
+                  >
+                    Login
+                  </button> 
+                  to save permanently.
+                </div>
+              </div>
+            )}        {/* Summary */}
         <div className="bg-white rounded-xl p-4 shadow-lg mb-4">
           <div className="text-base font-semibold mb-2">
             Subtotal ({getTotalItems()} items): ₹{getSubtotal().toLocaleString()}
@@ -663,12 +681,19 @@ const Cart = () => {
               loading={applyingDiscount || removingDiscount}
             />
             <button 
-              onClick={() => navigate('/checkout')}
+              onClick={handleProceedToBuy}
               className="bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 disabled:opacity-50" 
               disabled={!cartItems.length}
             >
               Proceed to Buy ({getTotalItems()} items)
             </button>
+            
+            {/* SignIn Modal */}
+            <SignIn 
+              isOpen={showSignIn} 
+              onClose={() => setShowSignIn(false)}
+              initialMode="login"
+            />
           </div>
         </div>
 
@@ -748,7 +773,13 @@ const Cart = () => {
               <div className="bg-yellow-50 border-b border-yellow-200 p-3">
                 <div className="text-yellow-800 text-sm">
                   <span className="font-medium">Guest Mode:</span> Your cart will be saved temporarily. 
-                  <a href="/login" className="underline ml-1">Login</a> to save permanently.
+                  <button 
+                    onClick={() => setShowSignIn(true)} 
+                    className="underline ml-1 text-pink-600 hover:text-pink-700"
+                  >
+                    Login
+                  </button> 
+                  to save permanently.
                 </div>
               </div>
             )}
@@ -821,7 +852,7 @@ const Cart = () => {
                   loading={applyingDiscount || removingDiscount}
                 />
                 <button 
-                  onClick={() => navigate('/checkout')}
+                  onClick={handleProceedToBuy}
                   className="bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 disabled:opacity-50" 
                   disabled={!cartItems.length}
                 >
@@ -855,6 +886,28 @@ const Cart = () => {
           </div>
         </div>
       </div>
+      {showSignIn && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-xl p-4 max-w-md w-full mx-4">
+            <button 
+              onClick={() => setShowSignIn(false)}
+              className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 z-50"
+            >
+              ✕
+            </button>
+            <SignIn 
+              isOpen={true}
+              onClose={() => {
+                setShowSignIn(false);
+                if (auth.isAuthenticated) {
+                  navigate('/checkout');
+                }
+              }}
+              initialMode="login"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

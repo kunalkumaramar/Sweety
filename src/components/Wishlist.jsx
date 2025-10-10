@@ -10,6 +10,9 @@ import { gsap } from "gsap";
 const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderStars }) => {
   const itemRef = useRef(null);
   const navigate = useNavigate();
+  
+  // Ensure we have a unique ID for the item
+  const itemId = item._id || item.id;
 
   useEffect(() => {
     // GSAP hover animations
@@ -74,15 +77,57 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
   };
 
   const handleMoveToCart = async () => {
-    const result = await moveToCart(item.id || item._id);
-    if (result && result.success) {
-      // Animate removal since item was moved
-      gsap.to(itemRef.current, {
-        x: 100,
-        opacity: 0,
-        duration: 0.3,
-        ease: "power2.in"
+    try {
+      // Get first available color and its sizes
+      const defaultColor = item.colors?.[0];
+      if (!defaultColor) {
+        console.error('No color information found:', item);
+        return;
+      }
+
+      // Get first available size from sizeStock
+      const defaultSize = defaultColor.sizeStock?.[0]?.size || '32';
+      
+      // Get image from color images or fallback to main product image
+      const selectedImage = defaultColor.images?.[0] || item.image;
+
+      // Ensure we have all required color information
+      const colorInfo = {
+        colorName: defaultColor.colorName || 'Default',
+        colorHex: defaultColor.colorHex || '#000000'
+      };
+
+      console.log('Moving to cart with:', {
+        color: colorInfo,
+        size: defaultSize,
+        image: selectedImage
       });
+
+      if (!colorInfo.colorName || !colorInfo.colorHex || !selectedImage) {
+        return;
+      }
+
+      const result = await moveToCart(
+        item.id || item._id,
+        1, // Default quantity
+        defaultSize,
+        colorInfo.colorName,
+        colorInfo.colorHex,
+        selectedImage
+      );
+
+      if (result && result.success) {
+        // Animate removal since item was moved
+        gsap.to(itemRef.current, {
+          x: 100,
+          opacity: 0,
+          duration: 0.3,
+          ease: "power2.in"
+        });
+      }
+    } catch (error) {
+      console.error('Failed to move item to cart:', error);
+      // You might want to show a notification here
     }
   };
 
@@ -90,13 +135,17 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
   const displayPrice = item.priceWhenAdded || item.price;
   const originalPrice = item.originalPrice;
 
+  // Generate a unique key for the wishlist item
+  const itemKey = item.id || item._id || Math.random().toString(36).substr(2, 9);
+
   return (
     <div 
+      key={itemKey}
       ref={itemRef}
       className="flex gap-4 py-4 px-4 bg-white rounded-lg shadow-sm border border-gray-100 mb-4 transition-all duration-300"
     >
       <img
-        src={item.images ? item.images[0] : item.image}
+        src={item.images?.[0] || item.image}
         alt={item.description || item.name}
         className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg object-cover flex-shrink-0 cursor-pointer"
         onClick={goToDetail}

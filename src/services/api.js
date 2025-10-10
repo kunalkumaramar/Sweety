@@ -41,8 +41,12 @@ class ApiService {
   getSessionId() {
     let sessionId = localStorage.getItem('guestSessionId');
     if (!sessionId) {
-      sessionId = 'session_' + Date.now() + Math.random().toString(36).substr(2, 9);
-      localStorage.getItem('guestSessionId', sessionId);
+      sessionId = 'session_' + Math.floor(Date.now() / 1000).toString() + 
+                 Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('guestSessionId', sessionId);
+      console.log('Created new guest session:', sessionId);
+    } else {
+      console.log('Using existing guest session:', sessionId);
     }
     return sessionId;
   }
@@ -210,6 +214,16 @@ class ApiService {
     return this.request('/cart/merge', {
       method: 'POST',
       body: JSON.stringify({ sessionId }),
+    });
+  }
+
+  // ========================================================================
+  // WISHLIST TO CART
+  // ========================================================================
+  async moveWishlistItemToCart(productId, quantity = 1, size = '', color = {}, selectedImage = '') {
+    return this.request(`/wishlist/move-to-cart/${productId}`, {
+      method: 'POST',
+      body: JSON.stringify({ quantity, size, color, selectedImage }),
     });
   }
 

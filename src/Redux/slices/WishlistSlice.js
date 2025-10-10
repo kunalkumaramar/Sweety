@@ -89,12 +89,26 @@ export const getWishlistCount = createAsyncThunk(
 
 export const moveWishlistItemToCart = createAsyncThunk(
   'wishlist/moveWishlistItemToCart',
-  async ({ productId, quantity = 1, size = 'M', colorName = '', colorHex = '#000000', selectedImage = '' }, { rejectWithValue }) => {
+  async ({ productId, quantity = 1, size = 'M', colorName = '', colorHex = '#000000', selectedImage = '' }, { dispatch, rejectWithValue }) => {
     try {
-      const response = await apiService.moveWishlistItemToCart(productId, quantity, size, colorName, colorHex, selectedImage);
-      return { productId, ...response.data };
+      // First try to add to cart
+      const cartResponse = await apiService.addToCart(
+        productId,
+        quantity,
+        size,
+        { colorName, colorHex },
+        selectedImage
+      );
+
+      if (cartResponse.success) {
+        // If successfully added to cart, remove from wishlist
+        await dispatch(removeFromWishlist(productId));
+        return { productId, success: true };
+      }
+
+      return rejectWithValue('Failed to add item to cart');
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.message || 'Failed to move item to cart');
     }
   }
 );
