@@ -609,31 +609,8 @@ const Navbar = () => {
               )}
             </div>
       
-            {/* Grid 7: Profile Icon - 1 column */}
+            {/* Grid 7: Wishlist Icon - 1 column */}
             <div className="col-span-1 flex items-center justify-end">
-              {isAuthenticated ? (
-                <button 
-                  onClick={() => navigate('/profile')}
-                  className="flex flex-col items-center group"
-                >
-                  <svg className="w-5 h-5 text-pink-500 group-hover:text-pink-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </button>
-              ) : (
-                <button 
-                  onClick={openSignIn}
-                  className="flex flex-col items-center group"
-                >
-                  <svg className="w-5 h-5 text-pink-500 group-hover:text-pink-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </button>
-              )}
-            </div>
-      
-            {/* Grid 8: Wishlist Icon - 1 column */}
-            <div className="col-span-1 flex items-center justify-center">
               <button 
                 onClick={() => navigate("/Wishlist")}
                 className="flex flex-col items-center group relative"
@@ -649,8 +626,8 @@ const Navbar = () => {
               </button>
             </div>
       
-            {/* Grid 9: Cart Icon - 1 column */}
-            <div className="col-span-1 flex items-center justify-start">
+            {/* Grid 8: Cart Icon - 1 column */}
+            <div className="col-span-1 flex items-center justify-center">
               <button
                 onClick={() => navigate("/cart")}
                 className="flex flex-col items-center group relative"
@@ -664,6 +641,37 @@ const Navbar = () => {
                   </span>
                 )}
               </button>
+            </div>
+      
+            {/* Grid 9: Profile Icon with Text - 1 column */}
+            <div className="col-span-1 flex items-center justify-start gap-2">
+              {isAuthenticated ? (
+                <button 
+                  onClick={() => navigate('/profile')}
+                  className="flex items-center gap-2 group"
+                >
+                  <svg className="w-6 h-6 text-pink-500 group-hover:text-pink-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <div className="flex flex-col leading-tight">
+                    <span className="text-base font-bold text-gray-800">Hey</span>
+                    <span className="text-base font-bold text-pink-500">Sweety</span>
+                  </div>
+                </button>
+              ) : (
+                <button 
+                  onClick={openSignIn}
+                  className="flex items-center gap-2 group"
+                >
+                  <svg className="w-6 h-6 text-pink-500 group-hover:text-pink-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <div className="flex flex-col leading-tight pt-2">
+                    <span className="text-base font-bold text-gray-800">Hey</span>
+                    <span className="text-base font-bold text-pink-500">Sweety</span>
+                  </div>
+                </button>
+              )}
             </div>
           </div>
         </div>
