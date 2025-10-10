@@ -141,11 +141,27 @@ class ApiService {
   // CART APIs (AUTHENTICATED)
   // ========================================================================
   async addToCart(productId, quantity = 1, size = 'M', color = {}, selectedImage = '') {
-    return this.request('/cart', {
-      method: 'POST',
-      body: JSON.stringify({ product: productId, quantity, size: size.toLowerCase(), color, selectedImage }),
-    });
-  }
+  const requestBody = { 
+    product: productId,
+    quantity, 
+    size: size.toLowerCase(), 
+    color, 
+    selectedImage 
+  };
+  
+  console.log('=== ADD TO CART REQUEST ===');
+  console.log('Product ID:', productId);
+  console.log('Product ID type:', typeof productId);
+  console.log('Product ID length:', productId?.length);
+  console.log('Full request body:', JSON.stringify(requestBody, null, 2));
+  console.log('Endpoint:', '/cart');
+  console.log('===========================');
+  
+  return this.request('/cart', {
+    method: 'POST',
+    body: JSON.stringify(requestBody),
+  });
+}
 
   async getUserCart() {
     return this.request('/cart');
@@ -186,7 +202,13 @@ class ApiService {
   async addToGuestCart(sessionId, productId, quantity = 1, size = 'M', color = {}, selectedImage = '') {
     return this.request(`/cart/guest/${sessionId}/product/${productId}`, {
       method: 'POST',
-      body: JSON.stringify({ quantity, size: size.toLowerCase(), color, selectedImage }),
+      body: JSON.stringify({
+        product: productId,   
+        quantity, 
+        size: size.toLowerCase(), 
+        color, 
+        selectedImage 
+      }),
     });
   }
 

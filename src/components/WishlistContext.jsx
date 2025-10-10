@@ -125,161 +125,136 @@ export const WishlistProvider = ({ children }) => {
   };
 
   // Move item to cart with enhanced parameters - Updated for new API
-  const moveItemToCart = async (productId, quantity = 1, size = '', colorName = '', colorHex = '', selectedImage = '') => {
-    try {
-      if (!productId) {
-        throw new Error('Product ID is required');
-      }
+const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, selectedImage = '') => {
+  try {
+    console.log('=== MOVE ITEM TO CART DEBUG ===');
+    console.log('Received productId:', productId);
+    console.log('All wishlist items:', JSON.stringify(wishlistItems, null, 2));
+    
+    if (!productId) {
+      throw new Error('Product ID is required');
+    }
 
-      // Find the item in the wishlist
-      const foundItem = wishlistItems?.find(item => {
-        const itemProduct = item.product || item;
-        return (itemProduct._id === productId || itemProduct.id === productId);
-      });
+    // Find the item in the wishlist using the product ID (item.id), not wishlist item ID (item._id)
+    const foundItem = wishlistItems?.find((item) => {
+      const itemProductId = item.id || (item.product && (item.product._id || item.product.id)) || item._id;
+      console.log('Comparing:', itemProductId, 'vs', productId);
+      return itemProductId === productId;
+    });
 
-      if (!foundItem) {
-        console.error('Item not found in wishlist. Available items:', wishlistItems);
-        throw new Error('Item not found in wishlist');
-      }
+    if (!foundItem) {
+      console.error('ITEM NOT FOUND!');
+      console.error('Searched for product ID:', productId);
+      console.error('Available product IDs:', wishlistItems.map(item => item.id || (item.product && item.product._id)));
+      throw new Error('Item not found in wishlist');
+    }
 
-      // Get the full product data
-      const productData = foundItem.product || foundItem;
-      console.log('Found product data:', productData);
+    console.log('Found item:', JSON.stringify(foundItem, null, 2));
+    
+    const productData = foundItem.product || foundItem;
+    const correctProductId = foundItem.id || productData.id || productData._id;
+    
+    console.log('Product data from wishlist:', JSON.stringify(productData, null, 2));
+    console.log('Correct product ID to send:', correctProductId);
+    console.log('================================');
 
-      // Get available colors and their sizes
-      const availableColors = productData.colors || [];
+    // If color object is complete, use it directly
+    let finalColor = color;
+    let finalSize = size;
+    let finalImage = selectedImage;
+
+    // If color object is empty or incomplete, get from product data
+    if (!color || !color.colorName || !color.colorHex) {
+      const availableColors = productData.colors;
       console.log('Available colors with sizeStock:', availableColors);
 
-      // Get all available sizes and colors
-      const availableSizes = Array.from(new Set(
-        availableColors.flatMap(color => color.sizeStock?.map(s => s.size) || [])
-      ));
-      console.log('Available sizes from sizeStock:', availableSizes);
-
-      if (availableSizes.length === 0) {
-        console.warn('No sizes available in any color for product:', productData);
-        throw new Error('No sizes available for this product');
+      if (!availableColors || availableColors.length === 0) {
+        throw new Error('No color information available for this product');
       }
 
-      // Convert common size formats to numeric if needed
-      const normalizeSize = (s) => {
-        const sizeMap = { 'S': '32', 'M': '34', 'L': '36', 'XL': '38', 'XXL': '40' };
-        return sizeMap[s] || s;
-      };
-
-      const normalizedRequestedSize = normalizeSize(size);
-
-      // Find the color that has the requested size in its sizeStock
-      let selectedColor = availableColors.find(color => 
-        color.sizeStock?.some(s => s.size === normalizedRequestedSize)
+      // Find the color that has the requested size in its sizeStock, or use first color
+      let selectedColor = availableColors.find((color) =>
+        color.sizeStock?.some((s) => s.size === size)
       ) || availableColors[0];
 
       if (!selectedColor) {
         throw new Error('No color information available for this product');
       }
 
-      // Ensure we have all required color information
-      if (!selectedColor.colorName || !selectedColor.colorHex) {
-        console.error('Missing color information:', selectedColor);
-        throw new Error('Product color information is incomplete');
-      }
-
-      // Get the final size - either requested size if available, or first available size
-      const normalizedFinalSize = availableSizes.includes(normalizedRequestedSize)
-        ? normalizedRequestedSize
-        : availableSizes[0];
-
-      // Get the selected image from the color or product
-      const colorImages = selectedColor.images || [];
-      const finalImage = selectedImage || colorImages[0] || productData.image;
-
-      if (!finalImage) {
-        throw new Error('Product image is required');
-      }
-
-      // Prepare the final color data
-      const finalColor = {
-        colorName: colorName || selectedColor.colorName,
-        colorHex: colorHex || selectedColor.colorHex
+      // Create complete color object
+      finalColor = {
+        colorName: selectedColor.colorName || 'Default',
+        colorHex: selectedColor.colorHex || '#000000',
+        images: selectedColor.images || [],
+        sizeStock: selectedColor.sizeStock || [],
+        _id: selectedColor._id
       };
 
-      // Use provided size if valid, otherwise use first available size from selected color
-      const finalSize = size && availableSizes.includes(size)
-        ? size
-        : (selectedColor.sizeStock?.[0]?.size || availableSizes[0] || '32');
+      // Get available sizes from the selected color
+      const availableSizes = selectedColor.sizeStock?.map((s) => s.size) || [];
+      console.log('Available sizes from sizeStock:', availableSizes);
 
-      // Also get the stock information for the selected size
-      const sizeStockInfo = selectedColor.sizeStock?.find(s => s.size === finalSize);
-
-      // Update the final color with default values if needed
-      finalColor.colorName = finalColor.colorName || 'Default';
-      finalColor.colorHex = finalColor.colorHex || '#000000';
-
-      // Check stock availability
-      if (sizeStockInfo && quantity > sizeStockInfo.stock) {
-        throw new Error(`Only ${sizeStockInfo.stock} items available in size ${finalSize}`);
+      if (availableSizes.length === 0) {
+        console.warn('No sizes available in any color for product', productData);
+        throw new Error('No sizes available for this product');
       }
 
-      // Format the product data as expected by the cart - ensure we use product ID consistently
-      const cartProductData = {
-        _id: productData.id || productData._id, // Prefer product.id as it's the actual product ID
-        name: productData.name,
-        brand: productData.brand,
-        price: productData.price,
-        originalPrice: productData.originalPrice,
-        image: finalImage,
-        description: productData.description,
-        category: productData.category,
-        colors: productData.colors,
-        sizeStock: sizeStockInfo ? [sizeStockInfo] : []
-      };
+      // Use the requested size if available, otherwise use first available size
+      finalSize = availableSizes.includes(size) ? size : availableSizes[0];
 
-      const cartData = {
-        product: cartProductData,  // Send the full product object
-        quantity,
-        size: finalSize,
-        color: finalColor,
-        selectedImage: finalImage
-      };
+      // Get image from selected color
+      finalImage = selectedColor.images?.[0] || productData.image;
+    }
 
-      console.log('Adding to cart with data:', cartData);
+    if (!finalImage) {
+      throw new Error('Product image is required');
+    }
 
-      // Add to cart first using the async action
-      try {
-        // Prepare data for the async action - ensure we use the correct product ID
-        const asyncCartData = {
-          productId: productData.id || productData._id, // Always use the product ID first
-          quantity,
-          size: finalSize,
-          colorName: finalColor.colorName,
-          colorHex: finalColor.colorHex,
-          selectedImage: finalImage,
-          fromWishlist: true  // This tells the action to use moveWishlistItemToCart
-        };
+    // Check stock availability
+    const sizeStockInfo = finalColor.sizeStock?.find((s) => s.size === finalSize);
+    if (sizeStockInfo && quantity > sizeStockInfo.stock) {
+      throw new Error(`Only ${sizeStockInfo.stock} items available in size ${finalSize}`);
+    }
 
-        console.log('Dispatching moveWishlistItemToCart with:', asyncCartData);
-        
-        // Use the async action
-        const cartResponse = await dispatch(addToCartAsync(asyncCartData)).unwrap();
+    // Get the correct product ID for the API call
+    //const correctProductId = productData._id || productData.id;
+    
+    console.log('Using product ID for API call:', correctProductId);
 
-        if (cartResponse && cartResponse.success !== false) {
-          // If cart addition was successful, remove from wishlist
-          await dispatch(removeFromWishlist(productId)).unwrap();
-          showNotification(`${productData.name || 'Item'} moved to cart!`, 'success');
-          return { success: true };
-        } else {
-          throw new Error(cartResponse?.message || 'Failed to add item to cart');
-        }
-      } catch (error) {
-        console.error('Cart error:', error);
-        throw new Error(error?.message || 'Failed to move item to cart');
+    // Prepare data for the async action
+    const asyncCartData = {
+      productId: correctProductId, // Use the correct product ID
+      quantity,
+      size: finalSize,
+      color: finalColor, // Pass complete color object
+      selectedImage: finalImage,
+      fromWishlist: true
+    };
+
+    console.log('Dispatching addToCartAsync with:', asyncCartData);
+
+    // Add to cart using the async action
+    try {
+      const cartResponse = await dispatch(addToCartAsync(asyncCartData)).unwrap();
+
+      if (cartResponse && cartResponse.success !== false) {
+        // If cart addition was successful, remove from wishlist
+        await dispatch(removeFromWishlist(foundItem.id || foundItem._id)).unwrap();
+        showNotification(`${productData.name} - Item moved to cart!`, 'success');
+        return { success: true };
+      } else {
+        throw new Error(cartResponse?.message || 'Failed to add item to cart');
       }
     } catch (error) {
-      console.error('Error moving item to cart:', error);
-      showNotification(error.message || 'Failed to move item to cart', 'error');
-      return { success: false, error: error.message };
+      console.error('Cart API error:', error);
+      throw new Error(error?.message || 'Failed to move item to cart');
     }
-  };
+  } catch (error) {
+    console.error('Error moving item to cart:', error);
+    showNotification(error.message || 'Failed to move item to cart', 'error');
+    return { success: false, error: error.message };
+  }
+};
 
   // Move all items to cart with notification
   const moveAllItemsToCart = async () => {

@@ -77,63 +77,93 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
   };
 
   const handleMoveToCart = async () => {
-    try {
-      // Get first available color and its sizes
-      const defaultColor = item.colors?.[0];
-      if (!defaultColor) {
-        console.error('No color information found:', item);
-        return;
-      }
+  try {
+    console.log('=== MOVE TO CART DEBUG ===');
+    console.log('Full item:', JSON.stringify(item, null, 2));
+    
+    // Extract the product data
+    const productData = item.product || item;
+    
+    console.log('Product data:', JSON.stringify(productData, null, 2));
+    
+    // Get the actual product ID
+    const productId = item.id || productData.id || productData._id;
+    
+    console.log('Extracted product ID:', productId);
+    console.log('Product ID type:', typeof productId);
+    
+    // IMPORTANT: Check if this ID actually exists in your products
+    console.log('Product name:', productData.name);
+    console.log('Product price:', productData.price);
+    console.log('===========================');
+    
+    if (!productId) {
+      console.error('No product ID found. Item structure:', item);
+      return;
+    }
 
-      // Get first available size from sizeStock
-      const defaultSize = defaultColor.sizeStock?.[0]?.size || '32';
-      
-      // Get image from color images or fallback to main product image
-      const selectedImage = defaultColor.images?.[0] || item.image;
+    // Get first available color and its sizes
+    const defaultColor = productData.colors?.[0];
 
-      // Ensure we have all required color information
-      const colorInfo = {
-        colorName: defaultColor.colorName || 'Default',
-        colorHex: defaultColor.colorHex || '#000000'
-      };
+    if (!defaultColor) {
+      console.error('No color information found', productData);
+      return;
+    }
 
-      console.log('Moving to cart with:', {
-        productId: item.id || item.product?._id,  // Use product ID first
+    // Get first available size from sizeStock
+    const defaultSize = defaultColor.sizeStock?.[0]?.size || '32';
+
+    // Get image from color images or fallback to main product image
+    const selectedImage = defaultColor.images?.[0] || productData.image;
+
+    // Create the complete color object with all required fields
+    const colorInfo = {
+      colorName: defaultColor.colorName || 'Default',
+      colorHex: defaultColor.colorHex || '#000000',
+      images: defaultColor.images || [],
+      sizeStock: defaultColor.sizeStock || [],
+      _id: defaultColor._id
+    };
+
+    console.log('Moving to cart with:', {
+      productId: productId,
+      color: colorInfo,
+      size: defaultSize,
+      image: selectedImage
+    });
+
+    // Validate required fields
+    if (!colorInfo.colorName || !colorInfo.colorHex || !selectedImage) {
+      console.error('Missing required fields:', {
         color: colorInfo,
-        size: defaultSize,
         image: selectedImage
       });
-
-      if (!colorInfo.colorName || !colorInfo.colorHex || !selectedImage) {
-        console.error('Missing required fields:', { color: colorInfo, image: selectedImage });
-        return;
-      }
-
-      // Use the original product ID, not the wishlist item ID
-      const productId = item.id || item.product?._id || item._id;
-      const result = await moveToCart(
-        productId,
-        1, // Default quantity
-        defaultSize,
-        colorInfo.colorName,
-        colorInfo.colorHex,
-        selectedImage
-      );
-
-      if (result && result.success) {
-        // Animate removal since item was moved
-        gsap.to(itemRef.current, {
-          x: 100,
-          opacity: 0,
-          duration: 0.3,
-          ease: "power2.in"
-        });
-      }
-    } catch (error) {
-      console.error('Failed to move item to cart:', error);
-      // You might want to show a notification here
+      return;
     }
-  };
+
+    // Call moveToCart with the complete color object
+    const result = await moveToCart(
+      productId, // Use the correctly extracted product ID
+      1, // Default quantity
+      defaultSize,
+      colorInfo, // Pass the complete color object
+      selectedImage
+    );
+
+    if (result && result.success) {
+      // Animate removal since item was moved
+      gsap.to(itemRef.current, {
+        x: 100,
+        opacity: 0,
+        duration: 0.3,
+        ease: 'power2.in',
+      });
+    }
+  } catch (error) {
+    console.error('Failed to move item to cart:', error);
+    // You might want to show a notification here
+  }
+};
 
   // Get price - use priceWhenAdded if available, fallback to current price
   const displayPrice = item.priceWhenAdded || item.price;

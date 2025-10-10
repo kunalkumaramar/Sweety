@@ -25,17 +25,53 @@ export const fetchCartDetails = createAsyncThunk(
   }
 );
 
-// Add to cart (automatically handles guest/authenticated users)
 export const addToCartAsync = createAsyncThunk(
-  'cart/addToCartAsync',
-  async ({ productId, quantity = 1, size = 'M', colorName, colorHex, selectedImage = '', fromWishlist = false }, { rejectWithValue }) => {
+  'cart/addToCart',
+  async ({ productId, quantity = 1, size, color, selectedImage, fromWishlist = false }, { rejectWithValue }) => {
     try {
-      const response = fromWishlist
-        ? await apiService.moveWishlistItemToCart(productId, quantity, size, colorName, colorHex, selectedImage)
-        : await apiService.smartAddToCart(productId, quantity, size, { colorName, colorHex }, selectedImage);
+      console.log('=== addToCartAsync called ===');
+      console.log('Product ID:', productId);
+      console.log('Quantity:', quantity);
+      console.log('Size:', size);
+      console.log('Color:', color);
+      console.log('Selected Image:', selectedImage);
+      
+      if (!productId) {
+        throw new Error('Product ID is required');
+      }
+      
+      if (!size) {
+        throw new Error('Size is required');
+      }
+      
+      if (!color || !color.colorName || !color.colorHex) {
+        throw new Error('Color information is required');
+      }
+      
+      if (!selectedImage) {
+        throw new Error('Product image is required');
+      }
+      
+      let response;
+      
+      // Call smartAddToCart with parameters in correct order
+      response = await apiService.smartAddToCart(
+        productId,        // 1st parameter: productId
+        quantity,         // 2nd parameter: quantity
+        size,            // 3rd parameter: size
+        color,           // 4th parameter: color object
+        selectedImage    // 5th parameter: selectedImage
+      );
+
+      console.log('=== Cart API Response ===');
+      console.log('Response:', response);
+      
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.message);
+      console.error('=== Cart API Error ===');
+      console.error('Error:', error);
+      console.error('Error message:', error.message);
+      return rejectWithValue(error.message || 'Failed to add item to cart');
     }
   }
 );
