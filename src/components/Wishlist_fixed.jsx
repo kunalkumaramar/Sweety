@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useWishlist } from './WishlistContext';
-import { useCart } from '../hooks/useCart';
 import { gsap } from 'gsap';
 
 const Wishlist = () => {

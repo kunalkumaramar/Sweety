@@ -98,17 +98,21 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
       };
 
       console.log('Moving to cart with:', {
+        productId: item.id || item.product?._id,  // Use product ID first
         color: colorInfo,
         size: defaultSize,
         image: selectedImage
       });
 
       if (!colorInfo.colorName || !colorInfo.colorHex || !selectedImage) {
+        console.error('Missing required fields:', { color: colorInfo, image: selectedImage });
         return;
       }
 
+      // Use the original product ID, not the wishlist item ID
+      const productId = item.id || item.product?._id || item._id;
       const result = await moveToCart(
-        item.id || item._id,
+        productId,
         1, // Default quantity
         defaultSize,
         colorInfo.colorName,

@@ -28,11 +28,11 @@ export const fetchCartDetails = createAsyncThunk(
 // Add to cart (automatically handles guest/authenticated users)
 export const addToCartAsync = createAsyncThunk(
   'cart/addToCartAsync',
-  async ({ productId, quantity = 1, size = 'M', color = {}, selectedImage = '', fromWishlist = false }, { rejectWithValue }) => {
+  async ({ productId, quantity = 1, size = 'M', colorName, colorHex, selectedImage = '', fromWishlist = false }, { rejectWithValue }) => {
     try {
       const response = fromWishlist
-        ? await apiService.moveWishlistItemToCart(productId, quantity, size, color, selectedImage)
-        : await apiService.smartAddToCart(productId, quantity, size, color, selectedImage);
+        ? await apiService.moveWishlistItemToCart(productId, quantity, size, colorName, colorHex, selectedImage)
+        : await apiService.smartAddToCart(productId, quantity, size, { colorName, colorHex }, selectedImage);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.message);

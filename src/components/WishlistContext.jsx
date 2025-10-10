@@ -220,9 +220,9 @@ export const WishlistProvider = ({ children }) => {
         throw new Error(`Only ${sizeStockInfo.stock} items available in size ${finalSize}`);
       }
 
-      // Format the product data as expected by the cart
+      // Format the product data as expected by the cart - ensure we use product ID consistently
       const cartProductData = {
-        _id: productData._id || productData.id,
+        _id: productData.id || productData._id, // Prefer product.id as it's the actual product ID
         name: productData.name,
         brand: productData.brand,
         price: productData.price,
@@ -246,9 +246,9 @@ export const WishlistProvider = ({ children }) => {
 
       // Add to cart first using the async action
       try {
-        // Prepare data for the async action
+        // Prepare data for the async action - ensure we use the correct product ID
         const asyncCartData = {
-          productId: cartProductData._id,
+          productId: productData.id || productData._id, // Always use the product ID first
           quantity,
           size: finalSize,
           colorName: finalColor.colorName,

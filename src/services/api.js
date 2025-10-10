@@ -20,6 +20,11 @@ class ApiService {
       },
       ...options,
     };
+    
+    // For debugging
+    if (options.method === 'POST' && options.body) {
+      console.log('Request body:', JSON.parse(options.body));
+    }
 
     try {
       const response = await fetch(url, config);
@@ -217,15 +222,7 @@ class ApiService {
     });
   }
 
-  // ========================================================================
-  // WISHLIST TO CART
-  // ========================================================================
-  async moveWishlistItemToCart(productId, quantity = 1, size = '', color = {}, selectedImage = '') {
-    return this.request(`/wishlist/move-to-cart/${productId}`, {
-      method: 'POST',
-      body: JSON.stringify({ quantity, size, color, selectedImage }),
-    });
-  }
+  // (Removed duplicate moveWishlistItemToCart - using the one in Wishlist APIs section)
 
   // ========================================================================
   // SMART CART (AUTO HANDLING AUTH / GUEST)
