@@ -63,7 +63,7 @@ const HeroSlider = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="relative h-[700px] lg:h-[800px] bg-gray-200 flex items-center justify-center">
+      <div className="relative h-[580px] lg:h-[680px] bg-gray-200 flex items-center justify-center">
         <div className="text-gray-600 text-xl">Loading banners...</div>
       </div>
     );
