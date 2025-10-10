@@ -72,7 +72,7 @@ const HeroSlider = () => {
   // Error state
   if (error) {
     return (
-      <div className="relative h-[700px] lg:h-[800px] bg-gray-100 flex items-center justify-center">
+      <div className="relative h-[580px] lg:h-[680px] bg-gray-100 flex items-center justify-center">
         <div className="text-red-600 text-xl">Error loading banners: {error}</div>
       </div>
     );
@@ -81,14 +81,14 @@ const HeroSlider = () => {
   // No banners state
   if (!banners || banners.length === 0) {
     return (
-      <div className="relative h-[700px] lg:h-[800px] bg-gray-100 flex items-center justify-center">
+      <div className="relative h-[580px] lg:h-[680px] bg-gray-100 flex items-center justify-center">
         <div className="text-gray-600 text-xl">No banners available</div>
       </div>
     );
   }
 
   return (
-    <div className="relative w-full h-[700px] lg:h-[800px] overflow-hidden">
+    <div className="relative w-full h-[580px] lg:h-[680px] overflow-hidden">
       {/* Slides Container */}
       <div className="relative w-full h-full">
         {banners.map((banner, index) => (

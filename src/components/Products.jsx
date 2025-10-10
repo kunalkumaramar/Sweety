@@ -738,15 +738,15 @@ const Products = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Page Header */}
         <div className="mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-pink-600 mb-1">
             {isSearchMode ? `Search Results for "${searchQuery}"` : pageTitle}
-            <span className="text-gray-500 font-normal text-sm sm:text-base">
+            {/*<span className="text-gray-500 font-normal text-sm sm:text-base">
               {" "}
               ({filteredProducts.length} items)
-            </span>
+            </span>*/}
           </h1>
           {subcategoryConfig?.description && (
-            <p className="text-gray-600 text-sm mt-2">
+            <p className="text-pink-600 text-sm mt-2">
               {subcategoryConfig.description}
             </p>
           )}
@@ -756,10 +756,10 @@ const Products = ({
         <div className="mb-4 sm:mb-6">
           {/* Mobile Filters */}
           <div className="block md:hidden">
-            <span className="font-bold text-lg text-gray-900 block mb-2">
+            <span className="font-bold text-lg text-pink-600 block mb-2">
               FILTERS
             </span>
-            <div className="bg-white rounded-sm border flex-1 p-3">
+            <div className="bg-white rounded-sm border-2 border-[#f06292] flex-1 p-3">
               <div className="grid grid-cols-2 gap-2 mb-3">
                 {/* <FilterDropdown
                   label="Color"
@@ -773,12 +773,12 @@ const Products = ({
                   value={filters.size}
                   onChange={(value) => handleFilterChange("size", value)}
                 />
-                <FilterDropdown
+                {/*<FilterDropdown
                   label="Tags"
                   options={getUniqueValues("tags")}
                   value={filters.tags}
                   onChange={(value) => handleFilterChange("tags", value)}
-                />
+                />*/}
                 <FilterDropdown
                   label="Price Range"
                   options={[
@@ -795,9 +795,9 @@ const Products = ({
             </div>
             <div className="flex items-center justify-between mt-3">
               <span className="text-gray-700 text-sm font-medium">SORT BY</span>
-              <div className="relative">
+              <div className="relative border-[#f06292] border-2 rounded">
                 <select
-                  className={`appearance-none bg-white rounded px-3 py-1 pr-6 text-sm transition-colors ${
+                  className={`appearance-none bg-[#f2e9e2] rounded px-3 py-1 pr-6 text-sm transition-colors ${
                     sortBy !== "Recommended" ? "text-pink-600" : "text-gray-700"
                   }`}
                   value={sortBy}
@@ -815,10 +815,10 @@ const Products = ({
           {/* Desktop Filters */}
           <div className="hidden md:block">
             <div className="flex items-center">
-              <span className="font-bold text-l lg:text-2xl pr-2 text-gray-900">
+              <span className="font-bold text-l lg:text-2xl pr-214 text-pink-600">
                 FILTERS
               </span>
-              <div className="bg-white rounded-sm border-2 flex-1">
+              <div className="bg-white rounded-sm border-2 border-[#f06292] flex-1">
                 <div className="flex justify-evenly flex-wrap gap-2">
                   {/* <FilterDropdown
                     label="Color"
@@ -832,12 +832,12 @@ const Products = ({
                     value={filters.size}
                     onChange={(value) => handleFilterChange("size", value)}
                   />
-                  <FilterDropdown
+                  {/*<FilterDropdown
                     label="Tags"
                     options={getUniqueValues("tags")}
                     value={filters.tags}
                     onChange={(value) => handleFilterChange("tags", value)}
-                  />
+                  />*/}
                   <FilterDropdown
                     label="Price Range"
                     options={[
@@ -861,9 +861,9 @@ const Products = ({
                 <span className="text-gray-700 text-sm lg:text-base">
                   SORT BY
                 </span>
-                <div className="relative">
+                <div className="relative border-[#f06292] border-2 rounded">
                   <select
-                    className={`appearance-none bg-white rounded px-4 py-2 pr-8 transition-colors ${
+                    className={`appearance-none bg-[#f2e9e2] rounded px-4 py-2 pr-8 transition-colors ${
                       sortBy !== "Recommended"
                         ? "text-pink-600"
                         : "text-gray-700"

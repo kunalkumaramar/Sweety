@@ -77,25 +77,11 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
   };
 
   const handleMoveToCart = async () => {
-  try {
-    console.log('=== MOVE TO CART DEBUG ===');
-    console.log('Full item:', JSON.stringify(item, null, 2));
-    
+  try {  
     // Extract the product data
-    const productData = item.product || item;
-    
-    console.log('Product data:', JSON.stringify(productData, null, 2));
-    
+    const productData = item.product || item;  
     // Get the actual product ID
     const productId = item.id || productData.id || productData._id;
-    
-    console.log('Extracted product ID:', productId);
-    console.log('Product ID type:', typeof productId);
-    
-    // IMPORTANT: Check if this ID actually exists in your products
-    console.log('Product name:', productData.name);
-    console.log('Product price:', productData.price);
-    console.log('===========================');
     
     if (!productId) {
       console.error('No product ID found. Item structure:', item);
@@ -124,13 +110,6 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
       sizeStock: defaultColor.sizeStock || [],
       _id: defaultColor._id
     };
-
-    console.log('Moving to cart with:', {
-      productId: productId,
-      color: colorInfo,
-      size: defaultSize,
-      image: selectedImage
-    });
 
     // Validate required fields
     if (!colorInfo.colorName || !colorInfo.colorHex || !selectedImage) {

@@ -171,7 +171,7 @@ const IntimatesCarousel = () => {
                   width: `calc(${cardWidthPercentage}% - ${itemsPerPage === 2 ? '12px' : '24px'})`,
                 }}
               >
-                <div className="card-item overflow-hidden hover:shadow-xl transition-all duration-300">
+                <div className="card-item overflow-hidden hover:shadow-xl transition-all duration-300 border-[4px] border-[#E8B0BD]">
                   {/* Image Container with Text Overlay */}
                   <div className="relative overflow-hidden">
                     <img

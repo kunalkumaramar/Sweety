@@ -148,15 +148,7 @@ class ApiService {
     color, 
     selectedImage 
   };
-  
-  console.log('=== ADD TO CART REQUEST ===');
-  console.log('Product ID:', productId);
-  console.log('Product ID type:', typeof productId);
-  console.log('Product ID length:', productId?.length);
-  console.log('Full request body:', JSON.stringify(requestBody, null, 2));
-  console.log('Endpoint:', '/cart');
-  console.log('===========================');
-  
+    
   return this.request('/cart', {
     method: 'POST',
     body: JSON.stringify(requestBody),

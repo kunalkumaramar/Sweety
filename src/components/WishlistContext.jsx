@@ -46,8 +46,7 @@ export const WishlistProvider = ({ children }) => {
 
   // Wrapper functions with notifications
   const addToWishlist = async (product) => {
-    console.log('Adding to wishlist, received product:', product);
-    
+  
     if (!isAuthenticated) {
       showNotification('Please login to use wishlist', 'error');
       return { success: false };
@@ -64,10 +63,7 @@ export const WishlistProvider = ({ children }) => {
       console.warn('No colors/sizeStock found in product:', product);
     }
 
-    console.log('About to call addToWishlistAction with product:', product);
     const result = await addToWishlistAction(product);
-    console.log('Wishlist addition result:', result);
-    
     if (result.success) {
       showNotification(`${product.brand || product.name} added to wishlist!`);
     } else {
@@ -127,10 +123,6 @@ export const WishlistProvider = ({ children }) => {
   // Move item to cart with enhanced parameters - Updated for new API
 const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, selectedImage = '') => {
   try {
-    console.log('=== MOVE ITEM TO CART DEBUG ===');
-    console.log('Received productId:', productId);
-    console.log('All wishlist items:', JSON.stringify(wishlistItems, null, 2));
-    
     if (!productId) {
       throw new Error('Product ID is required');
     }
@@ -138,7 +130,6 @@ const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, se
     // Find the item in the wishlist using the product ID (item.id), not wishlist item ID (item._id)
     const foundItem = wishlistItems?.find((item) => {
       const itemProductId = item.id || (item.product && (item.product._id || item.product.id)) || item._id;
-      console.log('Comparing:', itemProductId, 'vs', productId);
       return itemProductId === productId;
     });
 
@@ -149,14 +140,9 @@ const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, se
       throw new Error('Item not found in wishlist');
     }
 
-    console.log('Found item:', JSON.stringify(foundItem, null, 2));
     
     const productData = foundItem.product || foundItem;
     const correctProductId = foundItem.id || productData.id || productData._id;
-    
-    console.log('Product data from wishlist:', JSON.stringify(productData, null, 2));
-    console.log('Correct product ID to send:', correctProductId);
-    console.log('================================');
 
     // If color object is complete, use it directly
     let finalColor = color;
@@ -166,7 +152,6 @@ const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, se
     // If color object is empty or incomplete, get from product data
     if (!color || !color.colorName || !color.colorHex) {
       const availableColors = productData.colors;
-      console.log('Available colors with sizeStock:', availableColors);
 
       if (!availableColors || availableColors.length === 0) {
         throw new Error('No color information available for this product');
@@ -192,10 +177,8 @@ const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, se
 
       // Get available sizes from the selected color
       const availableSizes = selectedColor.sizeStock?.map((s) => s.size) || [];
-      console.log('Available sizes from sizeStock:', availableSizes);
 
       if (availableSizes.length === 0) {
-        console.warn('No sizes available in any color for product', productData);
         throw new Error('No sizes available for this product');
       }
 
@@ -218,8 +201,6 @@ const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, se
 
     // Get the correct product ID for the API call
     //const correctProductId = productData._id || productData.id;
-    
-    console.log('Using product ID for API call:', correctProductId);
 
     // Prepare data for the async action
     const asyncCartData = {
@@ -231,7 +212,6 @@ const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, se
       fromWishlist: true
     };
 
-    console.log('Dispatching addToCartAsync with:', asyncCartData);
 
     // Add to cart using the async action
     try {
@@ -246,12 +226,12 @@ const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, se
         throw new Error(cartResponse?.message || 'Failed to add item to cart');
       }
     } catch (error) {
-      console.error('Cart API error:', error);
+      //console.error('Cart API error:', error);
       throw new Error(error?.message || 'Failed to move item to cart');
     }
   } catch (error) {
-    console.error('Error moving item to cart:', error);
-    showNotification(error.message || 'Failed to move item to cart', 'error');
+    //console.error('Error moving item to cart:', error);
+    //showNotification(error.message || 'Failed to move item to cart', 'error');
     return { success: false, error: error.message };
   }
 };

@@ -653,9 +653,9 @@ const Navbar = () => {
                   <svg className="w-6 h-6 text-pink-500 group-hover:text-pink-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  <div className="flex flex-col leading-tight">
-                    <span className="text-base font-bold text-gray-800">Hey</span>
-                    <span className="text-base font-bold text-pink-500">Sweety</span>
+                  <div className="flex flex-col leading-tight pt-5 pl-3">
+                    <span className="text-base flex flex-start font-bold text-gray-800">Hey</span>
+                    <span className="text-base font-bold text-pink-500">Sweety!</span>
                   </div>
                 </button>
               ) : (
@@ -666,9 +666,9 @@ const Navbar = () => {
                   <svg className="w-6 h-6 text-pink-500 group-hover:text-pink-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  <div className="flex flex-col leading-tight pt-2">
-                    <span className="text-base font-bold text-gray-800">Hey</span>
-                    <span className="text-base font-bold text-pink-500">Sweety</span>
+                  <div className="flex flex-col leading-tight pt-5 pl-3">
+                    <span className="text-base flex flex-start font-bold text-gray-800">Hey</span>
+                    <span className="text-base font-bold text-pink-500">Sweety!</span>
                   </div>
                 </button>
               )}

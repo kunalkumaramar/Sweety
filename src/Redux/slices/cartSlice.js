@@ -29,13 +29,6 @@ export const addToCartAsync = createAsyncThunk(
   'cart/addToCart',
   async ({ productId, quantity = 1, size, color, selectedImage, fromWishlist = false }, { rejectWithValue }) => {
     try {
-      console.log('=== addToCartAsync called ===');
-      console.log('Product ID:', productId);
-      console.log('Quantity:', quantity);
-      console.log('Size:', size);
-      console.log('Color:', color);
-      console.log('Selected Image:', selectedImage);
-      
       if (!productId) {
         throw new Error('Product ID is required');
       }
