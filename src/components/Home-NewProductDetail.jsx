@@ -253,7 +253,7 @@ const HomeProductDetailSection = () => {
               <img
                 src={currentImage}
                 alt={`${latestProduct.name} - ${selectedColor?.colorName}`}
-                className="w-full h-[280px] xs:h-[320px] sm:h-[380px] md:h-[480px] object-cover rounded-lg"
+                className="w-full h-[460px] xs:h-[320px] sm:h-[380px] md:h-[480px] object-cover rounded-lg"
               />
               
               {/* Mobile Navigation Arrows Overlay */}

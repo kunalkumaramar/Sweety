@@ -666,7 +666,7 @@ const ProductDetail = () => {
                 <img
                   src={currentImage || ""}
                   alt={`${currentProduct.name} - ${selectedColor?.colorName}`}
-                  className="w-full h-[400px] md:h-[500px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in"
+                  className="w-full h-[460px] md:h-[500px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in"
                   style={{ transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%` }}
                 />
 

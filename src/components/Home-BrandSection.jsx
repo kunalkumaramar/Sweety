@@ -229,7 +229,7 @@ const LingerieHeroSection = () => {
           {/* Background Image */}
           <div className="absolute inset-0">
             <img 
-              src="https://res.cloudinary.com/dhezrgjf6/image/upload/v1759750953/prd12_ztlpkp.jpg"
+              src="https://res.cloudinary.com/dmrgscauc/image/upload/v1760178155/88_uipblt.png"
               alt="Lingerie Background"
               className="w-full h-full object-cover object-center"
             />
