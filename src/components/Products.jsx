@@ -759,7 +759,7 @@ const Products = ({
             <span className="font-bold text-lg text-pink-600 block mb-2">
               FILTERS
             </span>
-            <div className="bg-white rounded-sm border-2 border-[#f06292] flex-1 p-3">
+            <div className="bg-white rounded-[20px] border-2 border-[#f06292] flex-1 p-3">
               <div className="grid grid-cols-2 gap-2 mb-3">
                 {/* <FilterDropdown
                   label="Color"
@@ -795,9 +795,9 @@ const Products = ({
             </div>
             <div className="flex items-center justify-between mt-3">
               <span className="text-gray-700 text-sm font-medium">SORT BY</span>
-              <div className="relative border-[#f06292] border-2 rounded">
+              <div className="relative border-[#f06292] border-2 rounded-[20px]">
                 <select
-                  className={`appearance-none bg-[#f2e9e2] rounded px-3 py-1 pr-6 text-sm transition-colors ${
+                  className={`appearance-none bg-[#f2e9e2] rounded-[20px] px-3 py-1 pr-6 text-sm transition-colors ${
                     sortBy !== "Recommended" ? "text-pink-600" : "text-gray-700"
                   }`}
                   value={sortBy}
@@ -815,11 +815,11 @@ const Products = ({
           {/* Desktop Filters */}
           <div className="hidden md:block">
             <div className="flex items-center">
-              <span className="font-bold text-l lg:text-2xl pr-214 text-pink-600">
+              <span className="font-bold text-l lg:text-2xl pr-212 text-pink-600">
                 FILTERS
               </span>
-              <div className="bg-white rounded-sm border-2 border-[#f06292] flex-1">
-                <div className="flex justify-evenly flex-wrap gap-2">
+              <div className="bg-white rounded-[20px] border-2 border-[#f06292] flex-1">
+                <div className="flex justify-evenly flex-wrap gap-2 bg-white rounded-[20px] p-3">
                   {/* <FilterDropdown
                     label="Color"
                     options={getUniqueValues("colors")}
@@ -861,9 +861,9 @@ const Products = ({
                 <span className="text-gray-700 text-sm lg:text-base">
                   SORT BY
                 </span>
-                <div className="relative border-[#f06292] border-2 rounded">
+                <div className="relative border-[#f06292] border-2 rounded-[20px]">
                   <select
-                    className={`appearance-none bg-[#f2e9e2] rounded px-4 py-2 pr-8 transition-colors ${
+                    className={`appearance-none bg-[#f2e9e2] rounded-[20px] px-4 py-2 pr-8 transition-colors ${
                       sortBy !== "Recommended"
                         ? "text-pink-600"
                         : "text-gray-700"
