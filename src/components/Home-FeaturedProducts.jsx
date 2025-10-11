@@ -79,6 +79,7 @@ const CircularProductCard = React.memo(({
 
 const FeaturedProducts = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [rawFeaturedProducts, setRawFeaturedProducts] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -176,18 +177,44 @@ const FeaturedProducts = () => {
           }
         }
 
-        setFeaturedProducts(products);
+        setRawFeaturedProducts(products);
         setError(null);
       } catch (err) {
         console.error('Error fetching featured products:', err);
         setError('Failed to load featured products');
+        setRawFeaturedProducts([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchFeaturedProducts();
+    const cacheKey = 'featured_raw_products';
+    const cached = localStorage.getItem(cacheKey);
+    const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+    const now = Date.now();
+    const cacheExpiry = 3600000; // 1 hour
+
+    if (cached && cacheTime && (now - parseInt(cacheTime)) < cacheExpiry) {
+      setRawFeaturedProducts(JSON.parse(cached));
+      setLoading(false);
+    } else {
+      fetchFeaturedProducts();
+    }
   }, [API_BASE_URL]);
+
+  useEffect(() => {
+    if (rawFeaturedProducts.length === 0) {
+      setFeaturedProducts([]);
+      return;
+    }
+
+    const cacheKey = 'featured_raw_products';
+    setFeaturedProducts(rawFeaturedProducts);
+
+    // Cache the raw data
+    localStorage.setItem(cacheKey, JSON.stringify(rawFeaturedProducts));
+    localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+  }, [rawFeaturedProducts]);
 
   // Auto-scroll for mobile
   useEffect(() => {

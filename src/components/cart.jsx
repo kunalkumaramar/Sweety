@@ -135,6 +135,7 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars
         alt={item.product?.name || item.name}
         className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg object-cover flex-shrink-0 cursor-pointer hover:scale-105 transition-transform duration-300"
         onClick={goToDetail}
+        loading="lazy"
       />
 
       {/* Mobile Layout */}
@@ -352,6 +353,7 @@ const DealItem = ({ deal, addToCart, renderStars }) => {
         alt={deal.name}
         className="w-16 h-16 sm:w-20 sm:h-20 rounded-md object-cover cursor-pointer"
         onClick={goToDetail}
+        loading="lazy"
       />
       <div className="flex-1">
         <div
@@ -512,6 +514,7 @@ const Cart = () => {
   const { addToWishlist } = useWishlist();
   const containerRef = useRef(null);
   const [deals, setDeals] = useState([]);
+  const [rawDeals, setRawDeals] = useState([]);
   const [dealsLoading, setDealsLoading] = useState(false);
 
   const renderStars = (rating) => "★".repeat(Math.floor(rating));
@@ -594,16 +597,10 @@ const Cart = () => {
       }
     }
 
-    // Filter out cart items and limit to 6
-    const cartProductIds = cartItems.map(item => item.product?._id || item.productId);
-    const filteredProducts = products
-      .filter(product => !cartProductIds.includes(product._id))
-      .slice(0, 6);
-
-    setDeals(filteredProducts);
+    setRawDeals(products);
   } catch (error) {
     console.error('Failed to fetch deals:', error);
-    setDeals([]);
+    setRawDeals([]);
   } finally {
     setDealsLoading(false);
   }
@@ -611,9 +608,40 @@ const Cart = () => {
   
     // Only fetch if we have cart items loaded
     if (!loading) {
-      fetchDeals();
+      const cacheKey = 'cart_raw_deals';
+      const cached = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+      const now = Date.now();
+      const cacheExpiry = 3600000; // 1 hour
+
+      if (cached && cacheTime && (now - parseInt(cacheTime)) < cacheExpiry) {
+        setRawDeals(JSON.parse(cached));
+        setDealsLoading(false);
+      } else {
+        fetchDeals();
+      }
     }
-  }, [cartItems, loading]); // Re-fetch when cart changes
+  }, [loading]); // Removed cartItems from deps to avoid refetch on cart change
+
+  useEffect(() => {
+    if (rawDeals.length === 0) {
+      setDeals([]);
+      return;
+    }
+
+    const cacheKey = 'cart_raw_deals';
+    // Filter out cart items and limit to 6
+    const cartProductIds = cartItems.map(item => item.product?._id || item.productId);
+    const filteredProducts = rawDeals
+      .filter(product => !cartProductIds.includes(product._id))
+      .slice(0, 6);
+
+    setDeals(filteredProducts);
+
+    // Cache the raw data
+    localStorage.setItem(cacheKey, JSON.stringify(rawDeals));
+    localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+  }, [rawDeals, cartItems]);
 
   const handleApplyDiscount = async (code) => {
     return await applyDiscount(code);
@@ -928,4 +956,3 @@ if (!document.querySelector("#cart-styles")) {
 }
 
 export default Cart;
-                

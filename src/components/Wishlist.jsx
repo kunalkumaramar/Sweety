@@ -162,6 +162,7 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
         alt={item.description || item.name}
         className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg object-cover flex-shrink-0 cursor-pointer"
         onClick={goToDetail}
+        loading="lazy"
       />
       
       {/* Mobile Layout - Single Column */}
@@ -350,6 +351,7 @@ const RecommendationItem = ({ item, addToCart, addToWishlist, renderStars }) => 
   alt={item.description || item.name}
   className="w-16 h-16 sm:w-20 sm:h-20 rounded-md object-cover flex-shrink-0 cursor-pointer"
   onClick={goToDetail}
+  loading="lazy"
 />
       <div className="flex-1">
         <div
@@ -400,6 +402,7 @@ const Wishlist = () => {
   
   // Recommendations based on wishlist or popular products
   const [recommendations, setRecommendations] = useState([]);
+  const [rawRecommendations, setRawRecommendations] = useState([]);
 const [loadingRecommendations, setLoadingRecommendations] = useState(true);
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -426,53 +429,83 @@ useEffect(() => {
           // If subcategories exist, fetch one product from each
           for (const subcategory of subcategories) {
             const productsRes = await fetch(
-              `${API_BASE_URL}/product/subcategory/${subcategory._id}?page=1&limit=1&isActive=true`
+              `${API_BASE_URL}/product/subcategory/${subcategory._id}?page=1&limit=2&isActive=true`
             );
             const productsData = await productsRes.json();
-            const latestProduct = productsData.data?.products?.[0];
+            const latestProducts = productsData.data?.products || [];
             
-            if (latestProduct) {
-              products.push({
-                ...latestProduct,
-                categoryName: category.name,
-                subcategoryName: subcategory.name
-              });
-            }
+            latestProducts.forEach(latestProduct => {
+              if (latestProduct) {
+                products.push({
+                  ...latestProduct,
+                  categoryName: category.name,
+                  subcategoryName: subcategory.name
+                });
+              }
+            });
           }
         } else {
           // If no subcategories, fetch directly from category
           const productsRes = await fetch(
-            `${API_BASE_URL}/product/category/${category._id}?page=1&limit=1&isActive=true`
+            `${API_BASE_URL}/product/category/${category._id}?page=1&limit=2&isActive=true`
           );
           const productsData = await productsRes.json();
-          const latestProduct = productsData.data?.products?.[0];
+          const latestProducts = productsData.data?.products || [];
           
-          if (latestProduct) {
-            products.push({
-              ...latestProduct,
-              categoryName: category.name,
-              subcategoryName: null
-            });
-          }
+          latestProducts.forEach(latestProduct => {
+            if (latestProduct) {
+              products.push({
+                ...latestProduct,
+                categoryName: category.name,
+                subcategoryName: null
+              });
+            }
+          });
         }
       }
 
-      // Filter out products already in wishlist and limit to 6
-      const filteredProducts = products
-        .filter(product => !wishlistItems.find(item => (item.id || item._id) === product._id))
-        .slice(0, 6);
-
-      setRecommendations(filteredProducts);
+      setRawRecommendations(products);
     } catch (err) {
       console.error('Error fetching recommendations:', err);
-      setRecommendations([]);
+      setRawRecommendations([]);
     } finally {
       setLoadingRecommendations(false);
     }
   };
 
-  fetchRecommendations();
-}, [wishlistItems, API_BASE_URL]);
+  const cacheKey = 'wishlist_raw_recs';
+  const cached = localStorage.getItem(cacheKey);
+  const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+  const now = Date.now();
+  const cacheExpiry = 3600000; // 1 hour
+
+  if (cached && cacheTime && (now - parseInt(cacheTime)) < cacheExpiry) {
+    setRawRecommendations(JSON.parse(cached));
+    setLoadingRecommendations(false);
+  } else {
+    fetchRecommendations();
+    // Cache will be set in the filter effect after fetch
+  }
+}, [API_BASE_URL]);
+
+
+useEffect(() => {
+  if (rawRecommendations.length === 0) {
+    setRecommendations([]);
+    return;
+  }
+
+  const cacheKey = 'wishlist_raw_recs';
+  const filteredProducts = rawRecommendations
+    .filter(product => !wishlistItems.find(item => (item.id || item._id) === product._id))
+    .slice(0, 6);
+
+  setRecommendations(filteredProducts);
+
+  // Cache the raw data
+  localStorage.setItem(cacheKey, JSON.stringify(rawRecommendations));
+  localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+}, [rawRecommendations, wishlistItems]);
 
 
   const renderStars = (rating) => "★".repeat(rating);
