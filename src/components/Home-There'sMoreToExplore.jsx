@@ -11,6 +11,7 @@ const IntimatesCarousel = () => {
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [loadedImages, setLoadedImages] = useState({});
   const containerRef = useRef(null);
 
   // Fetch categories on component mount
@@ -174,11 +175,17 @@ const IntimatesCarousel = () => {
                 <div className="card-item overflow-hidden hover:shadow-xl transition-all duration-300 border-[4px] border-[#E8B0BD]">
                   {/* Image Container with Text Overlay */}
                   <div className="relative overflow-hidden">
+                    {!loadedImages[category._id] && (
+                      <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                      </div>
+                    )}
                     <img
                       src={category.image || 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop&crop=center'}
                       alt={category.name}
-                      className="w-full h-48 sm:h-56 md:h-64 lg:h-80 object-cover transition-transform duration-500 group-hover:scale-105"
+                      className={`w-full h-48 sm:h-56 md:h-64 lg:h-80 object-cover transition-all duration-500 group-hover:scale-105 ${loadedImages[category._id] ? "opacity-100" : "opacity-0"}`}
                       loading="lazy"
+                      onLoad={() => setLoadedImages(prev => ({...prev, [category._id]: true}))}
                       onError={(e) => {
                         e.target.src = 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop&crop=center';
                       }}

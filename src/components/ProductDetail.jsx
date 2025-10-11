@@ -54,6 +54,7 @@ const ProductDetail = () => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [addingToWishlist, setAddingToWishlist] = useState(false);
   const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 }); // Added for zoom origin
+  const [loadedImages, setLoadedImages] = useState({});
 
   // Refs
   const sectionRef = useRef(null);
@@ -386,6 +387,7 @@ const ProductDetail = () => {
   const SimilarProductCard = ({ product }) => {
     const [currentColorIndex, setCurrentColorIndex] = useState(0);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [loaded, setLoaded] = useState(false);
 
     const currentColor = product.colors?.[currentColorIndex];
     const currentImage = currentColor?.images?.[currentImageIndex];
@@ -410,10 +412,17 @@ const ProductDetail = () => {
       >
         {/* Clean Product Image - No Overlays */}
         <div className="relative aspect-[3/4] bg-gray-50 overflow-hidden">
+          {!loaded && (
+            <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+          )}
           <img
             src={currentImage || product.colors?.[0]?.images?.[0]}
             alt={product.name}
-            className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
+            className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+            loading="lazy"
+            onLoad={() => setLoaded(true)}
             onMouseEnter={() => {
               if (currentColor?.images?.length > 1) {
                 setCurrentImageIndex(1);
@@ -424,7 +433,7 @@ const ProductDetail = () => {
         </div>
 
         <div className="p-3">
-          {/* 1. Available Colors Display */}
+          {/* 1. Available Colors Display 
           <div className="flex items-center gap-1 mb-2">
             <div className="flex gap-1">
               {product.colors?.slice(0, 5).map((color, index) => (
@@ -449,7 +458,7 @@ const ProductDetail = () => {
                 </span>
               )}
             </div>
-          </div>
+          </div>*/}
 
           {/* 2. Category Name */}
           {productCategoryName && (
@@ -600,10 +609,17 @@ const ProductDetail = () => {
                       currentImageIndex === idx ? "border-gray-800" : "border-gray-200"
                     } rounded-lg overflow-hidden relative`}
                   >
+                    {!loadedImages[img] && (
+                      <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                      </div>
+                    )}
                     <img
                       src={img}
                       alt={`thumb-${idx}`}
-                      className="w-full h-32 object-cover"
+                      className={`w-full h-32 object-cover transition-opacity duration-300 ${loadedImages[img] ? "opacity-100" : "opacity-0"}`}
+                      loading="lazy"
+                      onLoad={() => setLoadedImages(prev => ({...prev, [img]: true}))}
                     />
                     {idx === 3 && currentImages.length > 4 && (
                       <div className="absolute inset-0 bg-black/40 backdrop-blur-none flex items-center justify-center rounded-lg text-white text-lg font-medium">
@@ -619,10 +635,17 @@ const ProductDetail = () => {
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
               >
+                {!loadedImages[currentImage] && (
+                  <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                  </div>
+                )}
                 <img
                   src={currentImage || ""}
                   alt={`${currentProduct.name} - ${selectedColor?.colorName}`}
-                  className="w-full h-[690px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in"
+                  className={`w-full h-[690px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in transition-opacity duration-300 ${loadedImages[currentImage] ? "opacity-100" : "opacity-0"}`}
+                  loading="lazy"
+                  onLoad={() => setLoadedImages(prev => ({...prev, [currentImage]: true}))}
                   style={{ transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%` }}
                 />
 
@@ -663,10 +686,17 @@ const ProductDetail = () => {
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
               >
+                {!loadedImages[currentImage] && (
+                  <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                  </div>
+                )}
                 <img
                   src={currentImage || ""}
                   alt={`${currentProduct.name} - ${selectedColor?.colorName}`}
-                  className="w-full h-[460px] md:h-[500px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in"
+                  className={`w-full h-[460px] md:h-[500px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in transition-opacity duration-300 ${loadedImages[currentImage] ? "opacity-100" : "opacity-0"}`}
+                  loading="lazy"
+                  onLoad={() => setLoadedImages(prev => ({...prev, [currentImage]: true}))}
                   style={{ transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%` }}
                 />
 
@@ -706,10 +736,17 @@ const ProductDetail = () => {
                         : "border-gray-200"
                     } rounded-lg overflow-hidden flex-shrink-0 relative`}
                   >
+                    {!loadedImages[img] && (
+                      <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                      </div>
+                    )}
                     <img
                       src={img}
                       alt={`thumb-${idx}`}
-                      className="w-16 h-20 sm:w-20 sm:h-24 object-cover"
+                      className={`w-16 h-20 sm:w-20 sm:h-24 object-cover transition-opacity duration-300 ${loadedImages[img] ? "opacity-100" : "opacity-0"}`}
+                      loading="lazy"
+                      onLoad={() => setLoadedImages(prev => ({...prev, [img]: true}))}
                     />
                     {idx === 3 && currentImages.length > 4 && (
                       <div className="absolute inset-0 bg-black/40 backdrop-blur-none flex items-center justify-center rounded-lg text-white text-sm font-medium">

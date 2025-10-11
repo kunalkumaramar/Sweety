@@ -26,6 +26,7 @@ const HomeProductDetailSection = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [addingToCart, setAddingToCart] = useState(false);
   const [addingToWishlist, setAddingToWishlist] = useState(false);
+  const [loadedImages, setLoadedImages] = useState({});
 
   const selectedColor = latestProduct?.colors?.[selectedColorIndex];
   const isInWishlist = latestProduct ? isItemInWishlist(latestProduct._id) : false;
@@ -177,11 +178,20 @@ const HomeProductDetailSection = () => {
           {/* Desktop Layout */}
           <div className="hidden lg:flex gap-4">
             <div className="flex-1 flex flex-col items-center">
-              <img
-                src={currentImage}
-                alt={`${latestProduct.name} - ${selectedColor?.colorName}`}
-                className="w-full h-[600px] object-cover rounded-lg"
-              />
+              <div className="relative w-full h-[600px]">
+                {!loadedImages[currentImage] && (
+                  <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                  </div>
+                )}
+                <img
+                  src={currentImage}
+                  alt={`${latestProduct.name} - ${selectedColor?.colorName}`}
+                  className={`w-full h-[600px] object-cover rounded-lg transition-opacity duration-300 ${loadedImages[currentImage] ? "opacity-100" : "opacity-0"}`}
+                  loading="lazy"
+                  onLoad={() => setLoadedImages(prev => ({...prev, [currentImage]: true}))}
+                />
+              </div>
 
               <div className="flex justify-center items-center gap-6 mt-3">
                 <button
@@ -217,10 +227,17 @@ const HomeProductDetailSection = () => {
                       onClick={() => setCurrentImageIndex(3)}
                       className="relative border-2 border-gray-200 rounded-lg overflow-hidden"
                     >
+                      {!loadedImages[img] && (
+                        <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                        </div>
+                      )}
                       <img
                         src={img}
                         alt={`thumb-${idx}`}
-                        className="w-full h-[142px] object-cover"
+                        className={`w-full h-[142px] object-cover transition-opacity duration-300 ${loadedImages[img] ? "opacity-100" : "opacity-0"}`}
+                        loading="lazy"
+                        onLoad={() => setLoadedImages(prev => ({...prev, [img]: true}))}
                       />
                       <div className="absolute inset-0 bg-black/40 backdrop-blur-none flex items-center justify-center text-white font-bold text-lg">
                         +{extraCount}
@@ -234,12 +251,19 @@ const HomeProductDetailSection = () => {
                     onClick={() => setCurrentImageIndex(idx)}
                     className={`border-2 ${
                       currentImageIndex === idx ? "border-gray-800" : "border-gray-200"
-                    } rounded-lg overflow-hidden`}
+                    } rounded-lg overflow-hidden relative`}
                   >
+                    {!loadedImages[img] && (
+                      <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                      </div>
+                    )}
                     <img
                       src={img}
                       alt={`thumb-${idx}`}
-                      className="w-full h-[142px] object-cover"
+                      className={`w-full h-[142px] object-cover transition-opacity duration-300 ${loadedImages[img] ? "opacity-100" : "opacity-0"}`}
+                      loading="lazy"
+                      onLoad={() => setLoadedImages(prev => ({...prev, [img]: true}))}
                     />
                   </button>
                 );
@@ -250,10 +274,17 @@ const HomeProductDetailSection = () => {
           {/* Mobile Layout - Enhanced Responsiveness */}
           <div className="lg:hidden">
             <div className="relative w-full mb-3 sm:mb-4">
+              {!loadedImages[currentImage] && (
+                <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                </div>
+              )}
               <img
                 src={currentImage}
                 alt={`${latestProduct.name} - ${selectedColor?.colorName}`}
-                className="w-full h-[460px] xs:h-[320px] sm:h-[380px] md:h-[480px] object-cover rounded-lg"
+                className={`w-full h-[460px] xs:h-[320px] sm:h-[380px] md:h-[480px] object-cover rounded-lg transition-opacity duration-300 ${loadedImages[currentImage] ? "opacity-100" : "opacity-0"}`}
+                loading="lazy"
+                onLoad={() => setLoadedImages(prev => ({...prev, [currentImage]: true}))}
               />
               
               {/* Mobile Navigation Arrows Overlay */}
@@ -295,10 +326,17 @@ const HomeProductDetailSection = () => {
                       onClick={() => setCurrentImageIndex(3)}
                       className="relative border-2 border-gray-200 rounded-md overflow-hidden flex-shrink-0"
                     >
+                      {!loadedImages[img] && (
+                        <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                        </div>
+                      )}
                       <img
                         src={img}
                         alt={`thumb-${idx}`}
-                        className="w-14 h-16 xs:w-16 xs:h-20 sm:w-18 sm:h-22 object-cover"
+                        className={`w-14 h-16 xs:w-16 xs:h-20 sm:w-18 sm:h-22 object-cover transition-opacity duration-300 ${loadedImages[img] ? "opacity-100" : "opacity-0"}`}
+                        loading="lazy"
+                        onLoad={() => setLoadedImages(prev => ({...prev, [img]: true}))}
                       />
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-sm">
                         +{extraCount}
@@ -312,12 +350,19 @@ const HomeProductDetailSection = () => {
                     onClick={() => setCurrentImageIndex(idx)}
                     className={`border-2 ${
                       currentImageIndex === idx ? "border-pink-600" : "border-gray-200"
-                    } rounded-md overflow-hidden flex-shrink-0 transition-all`}
+                    } rounded-md overflow-hidden flex-shrink-0 transition-all relative`}
                   >
+                    {!loadedImages[img] && (
+                      <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                      </div>
+                    )}
                     <img
                       src={img}
                       alt={`thumb-${idx}`}
-                      className="w-14 h-16 xs:w-16 xs:h-20 sm:w-18 sm:h-22 object-cover"
+                      className={`w-14 h-16 xs:w-16 xs:h-20 sm:w-18 sm:h-22 object-cover transition-opacity duration-300 ${loadedImages[img] ? "opacity-100" : "opacity-0"}`}
+                      loading="lazy"
+                      onLoad={() => setLoadedImages(prev => ({...prev, [img]: true}))}
                     />
                   </button>
                 );

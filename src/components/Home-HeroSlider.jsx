@@ -7,6 +7,7 @@ const HeroSlider = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [loadedImages, setLoadedImages] = useState([]);
 
   // Get banners from Redux store
   const { banners, loading, error } = useSelector((state) => state.banners);
@@ -15,6 +16,13 @@ const HeroSlider = () => {
   useEffect(() => {
     dispatch(fetchBanners());
   }, [dispatch]);
+
+  // Reset loadedImages when banners change
+  useEffect(() => {
+    if (banners.length > 0) {
+      setLoadedImages(new Array(banners.length).fill(false));
+    }
+  }, [banners]);
 
   // Auto-slide functionality with circular transition
   useEffect(() => {
@@ -101,13 +109,27 @@ const HeroSlider = () => {
           >
             <div
               onClick={() => handleBannerClick(banner.link)}
-              className={`w-full h-full ${banner.link ? 'cursor-pointer' : ''}`}
+              className={`w-full h-full relative ${banner.link ? 'cursor-pointer' : ''}`}
             >
+              {!loadedImages[index] && (
+                <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                </div>
+              )}
               <img
                 src={banner.imageUrl}
                 alt={banner.name}
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover transition-opacity duration-300 ${
+                  loadedImages[index] ? "opacity-100" : "opacity-0"
+                }`}
                 loading={index === 0 ? "eager" : "lazy"}
+                onLoad={() => {
+                  setLoadedImages((prev) => {
+                    const newLoaded = [...prev];
+                    newLoaded[index] = true;
+                    return newLoaded;
+                  });
+                }}
               />
             </div>
           </div>

@@ -497,6 +497,7 @@ const Products = ({
   const ProductCard = ({ product }) => {
     const [currentColorIndex, setCurrentColorIndex] = useState(0);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [loaded, setLoaded] = useState(false);
 
     const currentColor = product.colors?.[currentColorIndex];
     const currentImage = currentColor?.images?.[currentImageIndex];
@@ -521,10 +522,17 @@ const Products = ({
       >
         {/* Clean Product Image - No Overlays */}
         <div className="relative aspect-[3/4] bg-gray-50 overflow-hidden">
+          {!loaded && (
+            <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+          )}
           <img
             src={currentImage || product.colors?.[0]?.images?.[0]}
             alt={product.name}
-            className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
+            className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+            loading="lazy"
+            onLoad={() => setLoaded(true)}
             onMouseEnter={() => {
               if (currentColor?.images?.length > 1) {
                 setCurrentImageIndex(1);

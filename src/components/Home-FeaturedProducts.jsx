@@ -5,6 +5,7 @@ const CircularProductCard = React.memo(({
   product, index, currentIndex, totalItems, isMobile, onCardClick
 }) => {
   const isMainCard = index === currentIndex;
+  const [loaded, setLoaded] = useState(false);
 
   const cardTransform = useMemo(() => {
     const angleStep = (2 * Math.PI) / totalItems;
@@ -37,10 +38,17 @@ const CircularProductCard = React.memo(({
       <div className="bg-[#f9e2e7] overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-2">
         <div className="p-3 sm:p-4">
           <div className="bg-white p-1 relative overflow-hidden">
+            {!loaded && (
+              <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              </div>
+            )}
             <img
               src={product.colors?.[0]?.images?.[0] || product.images?.[0] || '/placeholder.png'}
               alt={product.name}
-              className="w-full h-auto max-h-72 object-contain transition-transform duration-300 hover:scale-105"  // <-- Changes here: h-auto, max-h-72, object-contain
+              className={`w-full h-auto max-h-72 object-contain transition-all duration-300 hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+              loading="lazy"
+              onLoad={() => setLoaded(true)}
             />
             <div className="absolute inset-0 bg-transparent bg-opacity-0 hover:bg-opacity-10 transition-all duration-300"></div>
           </div>

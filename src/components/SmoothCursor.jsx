@@ -37,6 +37,7 @@ export function SmoothCursor({
     restDelta: 0.001,
   },
 }) {
+  const [isMobile, setIsMobile] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const lastMousePos = useRef({ x: 0, y: 0 });
   const velocity = useRef({ x: 0, y: 0 });
@@ -56,7 +57,23 @@ export function SmoothCursor({
     damping: 35,
   });
 
+  // Detect mobile view
   useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // Adjust breakpoint as needed (e.g., 768 for tablet/mobile)
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) {
+      document.body.style.cursor = "auto";
+      return;
+    }
+
     const updateVelocity = (currentPos) => {
       const currentTime = Date.now();
       const deltaTime = currentTime - lastUpdateTime.current;
@@ -110,7 +127,11 @@ export function SmoothCursor({
       document.body.style.cursor = "auto";
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [cursorX, cursorY, rotation, scale]);
+  }, [cursorX, cursorY, rotation, scale, isMobile]);
+
+  if (isMobile) {
+    return null;
+  }
 
   return (
     <motion.div

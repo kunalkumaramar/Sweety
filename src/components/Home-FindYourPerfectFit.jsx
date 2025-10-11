@@ -1,5 +1,5 @@
 // sweetyintimate/src/components/Home-FindYourPerfectFit.jsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const PerfectFitSection = () => {
@@ -17,6 +17,8 @@ const PerfectFitSection = () => {
     "https://res.cloudinary.com/dihmaledw/image/upload/v1759485590/_T7A4951_cdbzyj.jpg",
     "https://res.cloudinary.com/dihmaledw/image/upload/v1759486767/_T7A4629_1_mvuj7v.jpg"
   ];
+
+  const [loadedImages, setLoadedImages] = useState(new Array(images.length).fill(false));
 
   useEffect(() => {
     // Add hover animations using CSS transitions
@@ -76,14 +78,27 @@ const PerfectFitSection = () => {
           {images.map((src, index) => (
             <div 
               key={index} 
-              className="flex-1"
+              className="flex-1 relative"
               style={{ aspectRatio: '4/5' }}
             >
+              {!loadedImages[index] && (
+                <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              )}
               <img
                 ref={(el) => imageRefs.current[index] = el}
                 src={src}
                 alt={`Bra fit ${index + 1}`}
-                className="w-full h-full object-cover transition-all duration-300 ease-out"
+                className={`w-full h-full object-cover transition-all duration-300 ease-out ${loadedImages[index] ? "opacity-100" : "opacity-0"}`}
+                loading="lazy"
+                onLoad={() => {
+                  setLoadedImages(prev => {
+                    const newLoaded = [...prev];
+                    newLoaded[index] = true;
+                    return newLoaded;
+                  });
+                }}
               />
             </div>
           ))}
@@ -95,33 +110,62 @@ const PerfectFitSection = () => {
             {images.slice(0, 4).map((src, index) => (
               <div 
                 key={index} 
-                className="flex-1"
+                className="flex-1 relative"
                 style={{ aspectRatio: '4/5' }}
               >
+                {!loadedImages[index] && (
+                  <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  </div>
+                )}
                 <img
                   ref={(el) => imageRefs.current[index] = el}
                   src={src}
                   alt={`Bra fit ${index + 1}`}
-                  className="w-full h-full object-cover transition-all duration-300 ease-out"
+                  className={`w-full h-full object-cover transition-all duration-300 ease-out ${loadedImages[index] ? "opacity-100" : "opacity-0"}`}
+                  loading="lazy"
+                  onLoad={() => {
+                    setLoadedImages(prev => {
+                      const newLoaded = [...prev];
+                      newLoaded[index] = true;
+                      return newLoaded;
+                    });
+                  }}
                 />
               </div>
             ))}
           </div>
           <div className="flex w-full">
-            {images.slice(4, 7).map((src, index) => (
-              <div 
-                key={index + 4} 
-                className="flex-1"
-                style={{ aspectRatio: '4/5' }}
-              >
-                <img
-                  ref={(el) => imageRefs.current[index + 4] = el}
-                  src={src}
-                  alt={`Bra fit ${index + 5}`}
-                  className="w-full h-full object-cover transition-all duration-300 ease-out"
-                />
-              </div>
-            ))}
+            {images.slice(4, 7).map((src, idx) => {
+              const index = idx + 4;
+              return (
+                <div 
+                  key={index}
+                  className="flex-1 relative"
+                  style={{ aspectRatio: '4/5' }}
+                >
+                  {!loadedImages[index] && (
+                    <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                    </div>
+                  )}
+                  <img
+                    ref={(el) => imageRefs.current[index] = el}
+                    src={src}
+                    alt={`Bra fit ${index + 1}`}
+                    className={`w-full h-full object-cover transition-all duration-300 ease-out ${loadedImages[index] ? "opacity-100" : "opacity-0"}`}
+                    loading="lazy"
+                    onLoad={() => {
+                      setLoadedImages(prev => {
+                        const newLoaded = [...prev];
+                        newLoaded[index] = true;
+                        return newLoaded;
+                      });
+                    }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -130,13 +174,27 @@ const PerfectFitSection = () => {
           {images.slice(0, 6).map((src, index) => (
             <div 
               key={index}
+              className="relative"
               style={{ aspectRatio: '4/5' }}
             >
+              {!loadedImages[index] && (
+                <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              )}
               <img
                 ref={(el) => imageRefs.current[index] = el}
                 src={src}
                 alt={`Bra fit ${index + 1}`}
-                className="w-full h-full object-cover transition-all duration-300 ease-out"
+                className={`w-full h-full object-cover transition-all duration-300 ease-out ${loadedImages[index] ? "opacity-100" : "opacity-0"}`}
+                loading="lazy"
+                onLoad={() => {
+                  setLoadedImages(prev => {
+                    const newLoaded = [...prev];
+                    newLoaded[index] = true;
+                    return newLoaded;
+                  });
+                }}
               />
             </div>
           ))}
@@ -147,7 +205,7 @@ const PerfectFitSection = () => {
       <div 
         className="flex-1 flex flex-col justify-center items-center text-center px-4 py-8 sm:py-12 lg:py-5"
         style={{ 
-          backgroundColor: 'rgba(249, 231, 229, 1)',
+          backgroundColor: 'rgba(249, 231, 237, 1)',
           minHeight: 'clamp(300px, 30vh, 500px)'
         }}
       >

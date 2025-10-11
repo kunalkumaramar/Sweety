@@ -1,5 +1,5 @@
 // sweetyintimate/src/components/Home-BrandSection.jsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { gsap } from 'gsap';
@@ -18,6 +18,9 @@ const LingerieHeroSection = () => {
   // Redux state
   const { subcategories, loading: subcategoriesLoading } = useSelector(state => state.subcategories);
   const { categories } = useSelector(state => state.categories);
+
+  const [leftImageLoaded, setLeftImageLoaded] = useState(false);
+  const [rightImageLoaded, setRightImageLoaded] = useState(false);
 
   // Fetch subcategories and categories on mount
   useEffect(() => {
@@ -179,10 +182,17 @@ const LingerieHeroSection = () => {
         >
           {/* Background Image */}
           <div className="absolute inset-0">
+            {!leftImageLoaded && (
+              <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+              </div>
+            )}
             <img 
               src="https://res.cloudinary.com/dhezrgjf6/image/upload/v1759750904/prd3_q8a5wg.jpg"
               alt="Lingerie Background"
-              className="w-full h-full object-cover object-center"
+              className={`w-full h-full object-cover object-center transition-opacity duration-300 ${leftImageLoaded ? "opacity-100" : "opacity-0"}`}
+              loading="lazy"
+              onLoad={() => setLeftImageLoaded(true)}
             />
             <div className="absolute inset-0 bg-opacity-20 md:bg-transparent"></div>
           </div>
@@ -228,10 +238,17 @@ const LingerieHeroSection = () => {
         >
           {/* Background Image */}
           <div className="absolute inset-0">
+            {!rightImageLoaded && (
+              <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+              </div>
+            )}
             <img 
               src="https://res.cloudinary.com/dmrgscauc/image/upload/v1760178155/88_uipblt.png"
               alt="Lingerie Background"
-              className="w-full h-full object-cover object-center"
+              className={`w-full h-full object-cover object-center transition-opacity duration-300 ${rightImageLoaded ? "opacity-100" : "opacity-0"}`}
+              loading="lazy"
+              onLoad={() => setRightImageLoaded(true)}
             />
             <div className="absolute inset-0 bg-opacity-40 md:bg-opacity-60"></div>
           </div>
