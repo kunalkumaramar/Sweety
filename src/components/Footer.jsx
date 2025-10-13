@@ -96,13 +96,13 @@ const Footer = () => {
               FOLLOW US
             </h3>
             <div className="flex gap-4">
-              <a href="#" className="p-2 rounded-full bg-white hover:bg-pink-100 transition-all duration-200 hover:scale-110 shadow-sm">
+              <a href="https://www.facebook.com/share/1DH1BBbq6s/" className="p-2 rounded-full bg-white hover:bg-pink-100 transition-all duration-200 hover:scale-110 shadow-sm">
                 <Facebook className="w-5 h-5 text-gray-700 hover:text-pink-600 transition-colors" />
               </a>
-              <a href="#" className="p-2 rounded-full bg-white hover:bg-pink-100 transition-all duration-200 hover:scale-110 shadow-sm">
+              <a href="https://www.instagram.com/sweety_intimates?igsh=MW54aGl1azl3dDl3dw==" className="p-2 rounded-full bg-white hover:bg-pink-100 transition-all duration-200 hover:scale-110 shadow-sm">
                 <Instagram className="w-5 h-5 text-gray-700 hover:text-pink-600 transition-colors" />
               </a>
-              <a href="mailto:info@sweetyintimates.com" className="p-2 rounded-full bg-white hover:bg-pink-100 transition-all duration-200 hover:scale-110 shadow-sm">
+              <a href="mailto:sneakyapparels@gmail.com" className="p-2 rounded-full bg-white hover:bg-pink-100 transition-all duration-200 hover:scale-110 shadow-sm">
                 <Mail className="w-5 h-5 text-gray-700 hover:text-pink-600 transition-colors" />
               </a>
             </div>
