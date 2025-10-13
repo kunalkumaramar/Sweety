@@ -68,12 +68,17 @@ const Footer = () => {
               <ul className="space-y-2">
                 <li>
                   <a href="/return-refund-policy" className="text-gray-600 hover:text-pink-600 text-sm transition-colors">
-                    Return & Refund Policy
+                    Return & Exchange Policy
                   </a>
                 </li>
                 <li>
                   <a href="/shipping-policy" className="text-gray-600 hover:text-pink-600 text-sm transition-colors">
                     Shipping Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="/terms-and-conditions" className="text-gray-600 hover:text-pink-600 text-sm transition-colors">
+                    Terms & Conditions
                   </a>
                 </li>
                 <li>
