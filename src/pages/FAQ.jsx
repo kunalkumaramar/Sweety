@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus } from 'lucide-react';
 
+
 const SweetyFAQ = () => {
   const [activeCategory, setActiveCategory] = useState('sizing');
   const [openItems, setOpenItems] = useState({});
@@ -9,6 +10,7 @@ const SweetyFAQ = () => {
   const leftColumnRef = useRef(null);
   const categoryRefs = useRef({});
   const questionRefs = useRef({});
+
 
   const categories = [
     {
@@ -30,7 +32,7 @@ const SweetyFAQ = () => {
         },
         {
           question: 'Can I exchange for a different size?',
-          answer: 'Absolutely! We offer easy size exchanges within 7 days of delivery. The product must be unworn, unwashed, and in original packaging with all tags attached.'
+          answer: 'Absolutely! We offer easy size exchanges within 3 days of delivery. The product must be unworn, unwashed, and in original packaging with all tags attached.'
         }
       ]
     },
@@ -57,7 +59,7 @@ const SweetyFAQ = () => {
         },
         {
           question: 'What is your quality guarantee?',
-          answer: 'We stand behind our products with a quality guarantee. If you receive a defective item, we\'ll replace it free of charge within 7 days of delivery. Please contact our customer service with photos of the defect.'
+          answer: 'We stand behind our products with a quality guarantee. If you receive a defective item, we\'ll replace it free of charge within 3 days of delivery. Please contact our customer service with photos of the defect.'
         }
       ]
     },
@@ -90,28 +92,32 @@ const SweetyFAQ = () => {
     },
     {
       id: 'returns',
-      title: 'Returns & Refunds',
-      description: 'Our hassle-free return and refund process to ensure your complete satisfaction.',
+      title: 'Returns & Exchange',
+      description: 'Our exchange process to ensure you get the perfect fit and complete satisfaction.',
       questions: [
         {
-          question: 'What is your return policy?',
-          answer: 'We accept returns within 7 days of delivery for hygiene reasons. Products must be unworn, unwashed, and in original packaging with all tags attached. Intimate wear cannot be returned once worn for hygiene purposes.'
+          question: 'What is your exchange policy?',
+          answer: 'We accept exchanges within 3 days of delivery for hygiene reasons. Products must be unworn, unwashed, and in original packaging with all tags attached. Intimate wear cannot be exchanged once worn for hygiene purposes.'
         },
         {
-          question: 'How do I initiate a return?',
-          answer: 'Log into your account, go to Orders, and select the item you wish to return. Follow the return instructions. You can also contact our customer service for assistance with the return process.'
+          question: 'How do I initiate an exchange?',
+          answer: 'Log into your account, go to Orders, and select the item you wish to exchange. Follow the exchange instructions and select your preferred replacement. You can also contact our customer service for assistance with the exchange process.'
         },
         {
-          question: 'When will I receive my refund?',
-          answer: 'Refunds are processed within 5-7 business days after we receive and inspect the returned item. The amount will be credited to your original payment method.'
+          question: 'Do you offer refunds?',
+          answer: 'We do not offer refunds on intimate wear due to hygiene reasons. However, we provide easy exchanges for different sizes or styles. In case of damaged or defective products, we will replace the item free of charge within 3 days of delivery.'
         },
         {
-          question: 'Are there any items that cannot be returned?',
-          answer: 'For hygiene reasons, we cannot accept returns on worn intimate wear, sale items marked as final sale, or customized products. Please check product pages for specific return eligibility.'
+          question: 'Are there any items that cannot be exchanged?',
+          answer: 'For hygiene reasons, we cannot accept exchanges on worn intimate wear, sale items marked as final sale, or customized products. Please check product pages for specific exchange eligibility.'
         },
         {
-          question: 'Who pays for return shipping?',
-          answer: 'For size exchanges and defective products, we provide free return pickup. For other returns, return shipping charges may apply as per our return policy.'
+          question: 'Who pays for exchange shipping?',
+          answer: 'For size exchanges and defective products, we provide free return pickup and delivery of the exchanged item. Standard exchange shipping is complimentary to ensure you get the perfect fit.'
+        },
+        {
+          question: 'How long does an exchange take?',
+          answer: 'Once we receive your returned item and verify its condition, we will ship the replacement within 2-3 business days. The entire exchange process typically takes 7-10 business days depending on your location.'
         }
       ]
     },
@@ -144,6 +150,7 @@ const SweetyFAQ = () => {
     }
   ];
 
+
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';
@@ -154,6 +161,7 @@ const SweetyFAQ = () => {
     };
     document.head.appendChild(script);
 
+
     return () => {
       if (document.head.contains(script)) {
         document.head.removeChild(script);
@@ -161,18 +169,22 @@ const SweetyFAQ = () => {
     };
   }, []);
 
+
   const animateInitialLoad = () => {
     if (!window.gsap) return;
+
 
     window.gsap.fromTo('.main-header',
       { opacity: 0, y: -30 },
       { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out' }
     );
 
+
     window.gsap.fromTo(leftColumnRef.current,
       { opacity: 0, x: -50 },
       { opacity: 1, x: 0, duration: 0.8, delay: 0.2, ease: 'power2.out' }
     );
+
 
     categories.forEach((category, categoryIndex) => {
       category.questions.forEach((_, questionIndex) => {
@@ -194,8 +206,10 @@ const SweetyFAQ = () => {
     });
   };
 
+
   const setupScrollTrigger = () => {
     if (!window.gsap) return;
+
 
     const handleScroll = () => {
       const scrollY = window.scrollY;
@@ -219,10 +233,12 @@ const SweetyFAQ = () => {
         }
       }
 
+
       if (newActiveCategory !== activeCategory) {
         updateActiveCategory(newActiveCategory);
       }
     };
+
 
     window.addEventListener('scroll', handleScroll);
     handleScroll();
@@ -230,8 +246,10 @@ const SweetyFAQ = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   };
 
+
   const updateActiveCategory = (newCategory) => {
     if (!window.gsap || !leftColumnRef.current || newCategory === activeCategory) return;
+
 
     const leftColumn = leftColumnRef.current;
     
@@ -251,6 +269,7 @@ const SweetyFAQ = () => {
     });
   };
 
+
   const toggleQuestion = (categoryId, questionIndex) => {
     const key = `${categoryId}-${questionIndex}`;
     const isOpening = !openItems[key];
@@ -259,6 +278,7 @@ const SweetyFAQ = () => {
       ...prev,
       [key]: isOpening
     }));
+
 
     if (window.gsap && isOpening) {
       const answerElement = document.querySelector(`#answer-${key}`);
@@ -271,7 +291,9 @@ const SweetyFAQ = () => {
     }
   };
 
+
   const currentCategory = categories.find(cat => cat.id === activeCategory);
+
 
   return (
     <div className="min-h-screen bg-white">
@@ -290,6 +312,7 @@ const SweetyFAQ = () => {
           </p>
         </div>
       </div>
+
 
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
@@ -310,6 +333,7 @@ const SweetyFAQ = () => {
             </div>
           </div>
 
+
           {/* Right Column - Questions */}
           <div className="lg:col-span-3">
             <div className="space-y-16">
@@ -328,6 +352,7 @@ const SweetyFAQ = () => {
                       {category.description}
                     </p>
                   </div>
+
 
                   {/* Questions */}
                   <div className="space-y-0">
@@ -377,8 +402,10 @@ const SweetyFAQ = () => {
         </div>
       </div>
 
+
     </div>
   );
 };
+
 
 export default SweetyFAQ;
