@@ -20,6 +20,7 @@ import SweetyFAQ from "./pages/FAQ";
 import ReturnRefundPolicy from "./pages/ReturnandRefundPolicy";
 import ShippingPolicy from "./pages/ShippingPolicy";
 import TermsCondition from "./pages/Terms&Conditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 // Components
 import ScrollToTop from './components/ScrollToTop';
@@ -55,6 +56,7 @@ function App() {
                 <Route path="/return-refund-policy" element={<ReturnRefundPolicy />} />
                 <Route path="/shipping-policy" element={<ShippingPolicy />} />
                 <Route path="/terms-and-conditions" element={<TermsCondition />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
                 {/* Dynamic product routes */}
                 <Route path="/products" element={<Products />} />
