@@ -274,7 +274,7 @@ const handlePlaceOrder = async (e) => {
   subtotal: totals.subtotal,
   totalDiscountAmount: totals.discountAmount || 0,
   shippingCharge: 0,
-  taxAmount: taxAmount, // ✅ Include tax
+  //taxAmount: taxAmount, // ✅ Include tax
   total: grandTotal      // ✅ New final total with tax
 };
 
@@ -322,8 +322,8 @@ const handlePlaceOrder = async (e) => {
 
 // Just before return(), calculate tax based on subtotal - discount
 const subtotalAfterDiscount = totals.subtotal - (totals.discountAmount || 0);
-const taxAmount = subtotalAfterDiscount * 0.18; // 18% GST
-const grandTotal = subtotalAfterDiscount + taxAmount; // New final total
+//const taxAmount = subtotalAfterDiscount * 0.18; // 18% GST
+const grandTotal = subtotalAfterDiscount; // New final total
 
 
   return (
@@ -561,10 +561,7 @@ const grandTotal = subtotalAfterDiscount + taxAmount; // New final total
     </div>
   )}
 
-  <div className="flex justify-between text-sm">
-    <span className="text-gray-600">Tax (18%)</span>
-    <span className="font-medium">₹{taxAmount.toFixed(2)}</span>
-  </div>
+  
 
   <div className="flex justify-between text-sm">
     <span className="text-gray-600">Shipping</span>

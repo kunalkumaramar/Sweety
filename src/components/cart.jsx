@@ -1,4 +1,4 @@
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useCart } from "../hooks/useCart";
 import { useWishlist } from "./WishlistContext";
 import { apiService } from '../services/api';
@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import SignIn from "../pages/SignIn";
+import Notification from './Notification';
+import { validateDiscountAsync, applyDiscountAsync, removeDiscountAsync } from '../Redux/slices/cartSlice';
   
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
@@ -477,9 +479,14 @@ const CouponSection = ({ onApplyDiscount, onRemoveDiscount, hasDiscount, applied
 
 // Main Cart Component
 const Cart = () => {
+  const dispatch = useDispatch();
+  const [discountCode, setDiscountCode] = useState('');
+  const [notification, setNotification] = useState(null);
   const navigate = useNavigate();
   const [showSignIn, setShowSignIn] = useState(false);
   const auth = useSelector((state) => state.auth);
+ // Get cart items from Redux
+  const { items } = useSelector((state) => state.cart);
 
   const { 
     items: cartItems, 
@@ -644,11 +651,84 @@ const Cart = () => {
   }, [rawDeals, cartItems]);
 
   const handleApplyDiscount = async (code) => {
-    return await applyDiscount(code);
+  if (!code.trim()) {
+    showNotification('Please enter a discount code', 'error');
+    return { success: false, error: 'Please enter a discount code' };
+  }
+
+  try {
+    // Get all product IDs from cart
+    const productIds = items.map(item => item.product?._id || item.productId);
+    
+    // First validate if discount can be used
+    const validationResult = await dispatch(
+      validateDiscountAsync({ 
+        code: code.trim(), 
+        productIds 
+      })
+    ).unwrap();
+
+    // Check the nested canUse
+    if (!validationResult?.data?.canUse) {
+      const errorMessage = validationResult?.data?.message || 'Invalid discount code';
+      throw new Error(errorMessage);
+    }
+
+    // If validation passes (assuming canUse: true), apply the discount
+    const result = await dispatch(
+      applyDiscountAsync({ 
+        code: code.trim(), 
+        type: 'coupon' 
+      })
+    ).unwrap();
+    
+    const discountAmount = result.appliedCoupon?.discountAmount || 
+                          result.appliedVoucher?.discountAmount || 
+                          0;
+    
+    showNotification(
+      `Discount applied successfully! You saved ₹${discountAmount}`, 
+      'success'
+    );
+    return { success: true, result };
+  } catch (error) {
+    // Handle validation errors
+    const errorMessage = typeof error === 'string' ? error : error.message || '';
+    
+    if (errorMessage.toLowerCase().includes('already used')) {
+      showNotification('You have already used this discount code', 'error');
+    } else if (errorMessage.toLowerCase().includes('expired')) {
+      showNotification('This discount code has expired', 'error');
+    } else if (errorMessage.toLowerCase().includes('not found') || 
+               errorMessage.toLowerCase().includes('invalid')) {
+      showNotification('Invalid discount code', 'error');
+    } else {
+      showNotification(errorMessage || 'Failed to apply discount', 'error');
+    }
+    
+    return { success: false, error: errorMessage };
+  }
+};
+
+   const handleRemoveDiscount = async () => {
+  try {
+    await dispatch(removeDiscountAsync()).unwrap();
+    showNotification('Discount removed successfully', 'info');
+    return { success: true };
+  } catch (error) {
+    const errorMessage = typeof error === 'string' ? error : error.message || '';
+    showNotification('Failed to remove discount', 'error');
+    return { success: false, error: errorMessage };
+  }
+};
+
+
+  const showNotification = (message, type) => {
+    setNotification({ message, type });
   };
 
-  const handleRemoveDiscount = async () => {
-    return await removeDiscount();
+  const closeNotification = () => {
+    setNotification(null);
   };
 
   useEffect(() => {
@@ -671,6 +751,14 @@ const Cart = () => {
 
   return (
     <div className="bg-gray-100 min-h-screen">
+      {/* Notification Component */}
+       {notification && (
+         <Notification
+           message={notification.message}
+           type={notification.type}
+           onClose={closeNotification}
+         />
+       )}
       {/* Mobile Layout */}
       <div className="lg:hidden p-3 pb-24" ref={containerRef}>
         {/* Auth Status Indicator */}

@@ -290,6 +290,13 @@ class ApiService {
     return this.request(`/discount/code/${code}`);
   }
 
+  async validateDiscount(code, productIds = []) {
+    return this.request('/cart/validate-discount', {
+      method: 'POST',
+      body: JSON.stringify({ code, productIds }),
+    });
+  }
+  
   // ========================================================================
   // WISHLIST APIs
   // ========================================================================

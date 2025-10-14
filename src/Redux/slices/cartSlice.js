@@ -176,6 +176,19 @@ export const getDiscountByCodeAsync = createAsyncThunk(
   }
 );
 
+// Validate discount usage
+export const validateDiscountAsync = createAsyncThunk(
+  'cart/validateDiscountAsync',
+  async ({ code, productIds }, { rejectWithValue }) => {
+    try {
+      const response = await apiService.validateDiscount(code, productIds);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 // ===== INITIAL STATE =====
 const initialState = {
   // Local cart for immediate UI updates
@@ -648,6 +661,20 @@ const cartSlice = createSlice({
       })
       .addCase(removeDiscountAsync.rejected, (state, action) => {
         state.removingDiscount = false;
+        state.discountError = action.payload;
+      })
+
+      // Validate discount usage
+      .addCase(validateDiscountAsync.pending, (state) => {
+        state.applyingDiscount = true;
+        state.discountError = null;
+      })
+      .addCase(validateDiscountAsync.fulfilled, (state, action) => {
+        state.applyingDiscount = false;
+        // Discount is valid and hasn't been used
+      })
+      .addCase(validateDiscountAsync.rejected, (state, action) => {
+        state.applyingDiscount = false;
         state.discountError = action.payload;
       })
 
