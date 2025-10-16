@@ -244,7 +244,7 @@ const LingerieHeroSection = () => {
               </div>
             )}
             <img 
-              src="https://res.cloudinary.com/dmrgscauc/image/upload/v1760178155/88_uipblt.png"
+              src="https://res.cloudinary.com/djgcv06ka/image/upload/v1760613841/46_z1w04o.png"
               alt="Lingerie Background"
               className={`w-full h-full object-cover object-center transition-opacity duration-300 ${rightImageLoaded ? "opacity-100" : "opacity-0"}`}
               loading="lazy"
