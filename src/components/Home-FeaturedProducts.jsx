@@ -33,7 +33,7 @@ const CircularProductCard = React.memo(
           transform: cardTransform.transform,
           opacity: cardTransform.opacity,
           zIndex: cardTransform.zIndex,
-          width: isMobile ? "160px" : "265px",
+          width: isMobile ? "w-[100vw]" : "265px",
         }}
         onClick={() => onCardClick(product)}
       >

@@ -223,6 +223,19 @@ const ProductDetail = () => {
     }
   }, [selectedColorIndex, selectedColor]);
 
+  // Handle body scroll locking for size chart modal
+  useEffect(() => {
+    if (isSizeChartOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isSizeChartOpen]);
+
   // Animate product details + similar products
   useEffect(() => {
     if (!loading && !productLoading && currentProduct) {
