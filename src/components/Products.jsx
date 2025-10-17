@@ -871,7 +871,7 @@ const Products = ({
                 </span>
                 <div className="relative border-[#f06292] border-2 rounded-[20px]">
                   <select
-                    className={`appearance-none bg-[#f2e9e2] rounded-[20px] px-4 py-2 pr-8 transition-colors ${
+                    className={`appearance-none text-center bg-[#f2e9e2] rounded-[20px] px-4 py-2 pr-8 transition-colors ${
                       sortBy !== "Recommended"
                         ? "text-pink-600"
                         : "text-gray-700"

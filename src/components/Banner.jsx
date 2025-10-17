@@ -3,7 +3,7 @@ import { gsap } from "gsap";
 
 const Banner = () => {
   const bannerRef = useRef(null);
-  const bannerText = "SHOP FOR $99 AND MANY MORE HERE";
+  const bannerText = "Introductory flat 10% OFF on all items! Use code ' NEW10 '";
 
   useEffect(() => {
     const ctx = gsap.context(() => {

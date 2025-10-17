@@ -407,7 +407,7 @@ const ProductDetail = () => {
 
     return (
       <div
-        className="product-card bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
+        className="product-card bg-[#f9e2e7] rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
         onClick={handleProductClick}
       >
         {/* Clean Product Image - No Overlays */}
