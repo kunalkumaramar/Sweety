@@ -106,7 +106,7 @@ const ContactUs = () => {
     {
       icon: <MapPin className="w-6 h-6" />,
       title: 'Visit Us',
-      details: ['Sweety Intimates Pvt Ltd', '123, Fashion Street, Koramangala', 'Bengaluru, Karnataka - 560034'],
+      details: ['Sneaky Apparels Pvt Ltd', '53, 1st Main Road, Vijaya Nagar', 'Bengaluru, Karnataka - 560040'],
       description: 'By appointment only'
     },
     {
