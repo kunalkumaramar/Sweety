@@ -28,17 +28,17 @@ const CircularProductCard = React.memo(
 
     return (
       <div
-        className="absolute transition-all duration-500 ease-out cursor-pointer will-change-transform"
+        className="absolute transition-all duration-500 ease-out cursor-pointer will-change-transform overflow-x-hidden"
         style={{
           transform: cardTransform.transform,
           opacity: cardTransform.opacity,
           zIndex: cardTransform.zIndex,
-          width: isMobile ? "w-[100vw]" : "265px",
+          width: isMobile ? "160px" : "265px",
         }}
         onClick={() => onCardClick(product)}
       >
         <div className="bg-[#f9e2e7] overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-2">
-          <div className="p-3 sm:p-4">
+          <div className=" sm:p-4">
             <div className="bg-white p-1 relative overflow-hidden">
               {!loaded && (
                 <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
@@ -322,7 +322,7 @@ const FeaturedProducts = () => {
   }
 
   return (
-    <div className="w-full py-8 bg-white sm:py-12 px-4 lg:px-2">
+    <div className="w-full py-8 bg-white sm:py-12 lg:px-2">
       <h2
         className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-8 sm:mb-12 text-black tracking-wide"
         style={{ fontFamily: "Montaga, serif" }}
@@ -351,7 +351,7 @@ const FeaturedProducts = () => {
           ref={containerRef}
           className={`relative ${
             isMobile ? "h-[450px]" : "h-[600px]"
-          } flex items-center justify-center transform-gpu overflow-visible`}
+          } flex items-center justify-center transform-gpu sm:overflow-visible overflow-x-hidden`}
           style={{
             perspective: isMobile ? "700px" : "900px",
             perspectiveOrigin: "center center",
