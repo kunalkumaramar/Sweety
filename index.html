@@ -2,10 +2,32 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon"  href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sweety Intimates</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+
+    <!-- Open Graph for social/Google -->
+    <meta property="og:title" content="Sweety Intimates" />
+    <meta property="og:description" content="At Sweety Intimates, we believe lingerie is more than just fabric — it’s a celebration of confidence, comfort, and femininity." />
+    <meta property="og:image" content="https://sweetyintimates.com/logo.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://sweetyintimates.com" />
+
+    <!-- Schema.org (JSON-LD for Google) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Sweety Intimates",
+      "url": "https://sweetyintimates.com",
+      "logo": "https://sweetyintimates.com/logo.png"
+    }
+    </script>
   </head>
+
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
