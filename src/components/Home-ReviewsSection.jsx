@@ -7,82 +7,91 @@ const ReviewsSection = () => {
   const reviews = [
     {
       id: 1,
-      name: "Sunny Leopez",
+      name: "Aanya Kapoor",
       isVerified: true,
       rating: 5,
+      gender: "female",
       review:
         "I've tried many brands before, but this one truly stands out. The fabric is soft on the skin, provides great support, and feels comfortable even after long hours of wear. The fit is perfect and true to size, with no digging or slipping. Definitely my new go-to brand for everyday wear!",
       product: "Bright bra | Blue",
-      price: "₹. 415.00",
-      image: "https://picsum.photos/80/80?random=1",
+      price: "₹. 999.00",
     },
     {
       id: 2,
-      name: "Danny Dhaniyaal",
+      name: "Diya Sharma",
       isVerified: true,
       rating: 4,
+      gender: "female",
       review:
         "The comfort level is unmatched. The straps don’t slip, and the band feels secure without being tight. The colors are beautiful too!",
       product: "Comfort bra | Red",
-      price: "₹. 520.00",
-      image: "https://picsum.photos/80/80?random=2",
+      price: "₹. 699.00",
     },
     {
       id: 3,
-      name: "Abella Dukandar",
+      name: "Kavya Mehta",
       isVerified: false,
       rating: 5,
+      gender: "female",
       review:
         "Superb quality and fit! I was skeptical at first, but this exceeded expectations. Worth every penny.",
       product: "Everyday bra | Black",
-      price: "₹. 399.00",
-      image: "https://picsum.photos/80/80?random=3",
+      price: "₹. 849.00",
     },
     {
       id: 4,
-      name: "Lana Raastey",
+      name: "Mira Joshi",
       isVerified: true,
       rating: 5,
+      gender: "female",
       review:
         "I love how breathable the fabric is. Perfect for daily wear, and the stitching is top-notch. Definitely recommending to friends!",
       product: "Soft Touch | Nude",
-      price: "₹. 450.00",
-      image: "https://picsum.photos/80/80?random=4",
+      price: "₹. 649.00",
     },
     {
       id: 5,
-      name: "Angela Safed",
+      name: "Harish Reddy",
       isVerified: true,
       rating: 4,
+      gender: "male",
       review:
         "Gifted it to my wife, and she absolutely loves it. Great fit, nice material, and stylish look!",
       product: "Style bra | White",
-      price: "₹. 480.00",
-      image: "https://picsum.photos/80/80?random=5",
+      price: "₹. 1249.00",
     },
     {
       id: 6,
-      name: "Eva Elaichi",
+      name: "Isha Jain",
       isVerified: true,
       rating: 5,
+      gender: "female",
       review:
         "Hands down the best I’ve tried so far. The padding is just right, not too much, not too little. Perfect for all-day comfort.",
       product: "Perfect Fit | Pink",
-      price: "₹. 560.00",
-      image: "https://picsum.photos/80/80?random=6",
+      price: "₹. 949.00",
     },
     {
       id: 7,
-      name: "Mia Malakpet",
+      name: "Ananya Gupta",
       isVerified: false,
       rating: 5,
+      gender: "female",
       review:
         "Fantastic product! I wasn’t sure initially, but after trying it I’m ordering more. Fits beautifully and looks premium.",
       product: "Classic bra | Green",
-      price: "₹. 430.00",
-      image: "https://picsum.photos/80/80?random=7",
+      price: "₹. 549.00",
     },
   ];
+
+  // Choose gender-specific image
+  const getProfileImage = (gender, id) => {
+    if (gender === "male") {
+      return `https://randomuser.me/api/portraits/men/${id + 10}.jpg`; // Indian-looking man
+    } else {
+      return `https://randomuser.me/api/portraits/women/${id + 20}.jpg`; // Indian-looking woman
+    }
+  };
 
   // Duplicate for infinite scroll
   const duplicatedReviews = [...reviews, ...reviews, ...reviews];
@@ -123,7 +132,7 @@ const ReviewsSection = () => {
   );
 
   const ReviewCard = ({ review }) => (
-    <div className="bg-white rounded-lg px-6 py-8  border border-none w-[350px] mx-6 flex-shrink-0 flex flex-col justify-between">
+    <div className="bg-white rounded-lg px-6 py-8 border border-none w-[350px] mx-6 flex-shrink-0 flex flex-col justify-between">
       {/* Top section */}
       <div>
         <StarRating rating={review.rating} />
@@ -148,7 +157,6 @@ const ReviewsSection = () => {
           )}
         </div>
 
-        {/* ✅ review text expands */}
         <p className="text-gray-500 text-sm leading-relaxed whitespace-normal break-words">
           {review.review}
         </p>
@@ -159,8 +167,8 @@ const ReviewsSection = () => {
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0">
             <img
-              src={review.image}
-              alt="Product"
+              src={getProfileImage(review.gender, review.id)}
+              alt={review.name}
               className="w-full h-full object-cover"
             />
           </div>
@@ -178,16 +186,16 @@ const ReviewsSection = () => {
       <div className="w-full mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h2 className="text-6xl font-bold text-gray-900 mb-2"
-          style={{
-            fontFamily:"Montage",
-          }}>
+          <h2
+            className="text-6xl font-bold text-gray-900 mb-2"
+            style={{ fontFamily: "Montage" }}
+          >
             Customer Say!
           </h2>
-          <p className="text-base font-bold text-gray-600 max-w-2xl mx-auto"
-          style={{
-            fontFamily:"Oswald",
-          }}>
+          <p
+            className="text-base font-bold text-gray-600 max-w-2xl mx-auto"
+            style={{ fontFamily: "Oswald" }}
+          >
             Discover What Our Customers Are Raving About and Why They Love Our
             Products!
           </p>

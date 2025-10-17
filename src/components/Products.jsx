@@ -91,7 +91,7 @@ const Products = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [isSearchMode, setIsSearchMode] = useState(false);
 
-  const itemsPerPage = 12;
+  const itemsPerPage = 8;
 
   // Get current products based on mode
   const currentProducts = isSearchMode ? searchResults : products;
@@ -517,7 +517,7 @@ const Products = ({
 
     return (
       <div
-        className="product-card bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
+        className="product-card bg-[#f9e2e7] rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
         onClick={handleProductClick}
       >
         {/* Clean Product Image - No Overlays */}
@@ -805,7 +805,7 @@ const Products = ({
               <span className="text-gray-700 text-sm font-medium">SORT BY</span>
               <div className="relative border-[#f06292] border-2 rounded-[20px]">
                 <select
-                  className={`appearance-none bg-[#f2e9e2] rounded-[20px] px-3 py-1 pr-6 text-sm transition-colors ${
+                  className={`appearance-none text-center bg-[#f2e9e2] rounded-[20px] px-3 py-1 pr-6 text-sm transition-colors ${
                     sortBy !== "Recommended" ? "text-pink-600" : "text-gray-700"
                   }`}
                   value={sortBy}

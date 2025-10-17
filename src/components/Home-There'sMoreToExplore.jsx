@@ -137,7 +137,7 @@ const IntimatesCarousel = () => {
         {showPrevButton && (
           <button
             onClick={prevSlide}
-            className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 bg-pink-400 hover:bg-pink-500 rounded-sm shadow-lg transition-all duration-300 flex items-center justify-center hover:shadow-xl hover:scale-105"
+            className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 bg-pink-400 hover:bg-pink-500 rounded-sm shadow-lg transition-all duration-200 flex items-center justify-center hover:shadow-xl hover:scale-105"
             aria-label="Previous categories"
           >
             <ChevronLeft className="text-white w-4 h-4 sm:w-5 sm:h-5" />
@@ -147,7 +147,7 @@ const IntimatesCarousel = () => {
         {showNextButton && (
           <button
             onClick={nextSlide}
-            className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 bg-pink-400 hover:bg-pink-500 rounded-sm shadow-lg transition-all duration-300 flex items-center justify-center hover:shadow-xl hover:scale-105"
+            className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 bg-pink-400 hover:bg-pink-500 rounded-sm shadow-lg transition-all duration-200 flex items-center justify-center hover:shadow-xl hover:scale-105"
             aria-label="Next categories"
           >
             <ChevronRight className="text-white w-4 h-4 sm:w-5 sm:h-5" />
@@ -158,7 +158,7 @@ const IntimatesCarousel = () => {
         <div className="overflow-hidden mx-2 sm:mx-14">
           <div 
             ref={containerRef}
-            className="flex transition-transform duration-500 ease-in-out"
+            className="flex transition-transform duration-200 ease-in-out"
             style={{
               transform: `translateX(-${currentIndex * cardWidthPercentage}%)`,
             }}
