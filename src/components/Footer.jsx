@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Facebook, Instagram, Mail } from "lucide-react"; // ✅ replaced Youtube with Mail
 import gsap from "gsap";
-import Logo from '/LOGO.png'
+import Logo from '/logo.png'
 
 const Footer = () => {
   const footerRef = useRef(null);

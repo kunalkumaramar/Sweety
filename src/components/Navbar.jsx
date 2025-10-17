@@ -14,7 +14,7 @@ import {
   getAllSubcategories,
   searchSubcategories 
 } from '../Redux/slices/subcategorySlice';
-import Logo from "/LOGO.png";
+import Logo from "/logo.png";
 import WavyBg from "/wavy-bg.png";
 import Banner from "../components/Banner";
 import SignIn from "../pages/SignIn";

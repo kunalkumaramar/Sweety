@@ -982,10 +982,11 @@ const ProductDetail = () => {
                       key={spec._id} 
                       className="bg-[#f9e2e7]"
                     >
-                      <td className="py-3 px-4 font-semibold text-base text-gray-800 align-top" style={{ width: '180px' }}>
-                        {spec.label}
+                      <td className="py-3 px-4 " style={{ width: '180px' }}>
+                        <div className="font-semibold text-base text-gray-800 align-top">{spec.label}</div>
+                        <div className="sm:hidden text-base text-gray-700">{spec.description}</div>
                       </td>
-                      <td className="py-3 px-4 text-base text-gray-700">
+                      <td className="hidden sm:flex py-3 px-4 text-base text-gray-700">
                         {spec.description}
                       </td>
                     </tr>
