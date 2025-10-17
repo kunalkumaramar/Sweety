@@ -2,20 +2,38 @@ import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { fetchBanners } from "../Redux/slices/bannerSlice";
+import { fetchMobileBanners } from "../Redux/slices/mobileBannerSlice";
 
 const HeroSlider = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loadedImages, setLoadedImages] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   // Get banners from Redux store
-  const { banners, loading, error } = useSelector((state) => state.banners);
+  const { banners, loading, error } = useSelector((state) =>
+    isMobile ? state.mobileBanners : state.banners
+  );
 
-  // Fetch banners on component mount
+  // Handle window resize to update isMobile
   useEffect(() => {
-    dispatch(fetchBanners());
-  }, [dispatch]);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Fetch banners based on device type
+  useEffect(() => {
+    if (isMobile) {
+      dispatch(fetchMobileBanners());
+    } else {
+      dispatch(fetchBanners());
+    }
+  }, [dispatch, isMobile]);
 
   // Reset loadedImages when banners change
   useEffect(() => {

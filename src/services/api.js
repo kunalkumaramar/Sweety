@@ -463,6 +463,20 @@ class ApiService {
   async getBanners() {
     return this.request('/banner');
   }
+
+
+  // ========================================================================
+  // Mobile BANNER APIs
+  // ========================================================================
+  
+  /**
+   * Get all banners
+   * @returns {Promise} Promise with all banners data
+   */
+
+  async getMobileBanners() {
+    return this.request('/mobile-banner');
+  }
 }
 
 export const apiService = new ApiService();

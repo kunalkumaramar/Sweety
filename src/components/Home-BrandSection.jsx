@@ -236,22 +236,22 @@ const LingerieHeroSection = () => {
                      min-h-[40vh] sm:min-h-[50vh] md:min-h-[70vh] lg:min-h-[80vh] xl:min-h-[90vh]
                      px-4 py-6 sm:px-6 sm:py-8 md:px-6 md:py-8 lg:px-8 lg:py-10 xl:px-12 xl:py-12"
         >
-          {/* Background Image */}
-          <div className="absolute inset-0">
-            {!rightImageLoaded && (
-              <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-              </div>
-            )}
-            <img 
-              src="https://res.cloudinary.com/djgcv06ka/image/upload/v1760613841/46_z1w04o.png"
-              alt="Lingerie Background"
-              className={`w-full h-full object-cover object-center transition-opacity duration-300 ${rightImageLoaded ? "opacity-100" : "opacity-0"}`}
-              loading="lazy"
-              onLoad={() => setRightImageLoaded(true)}
-            />
-            <div className="absolute inset-0 bg-opacity-40 md:bg-opacity-60"></div>
-          </div>
+        {/* Background Image */}
+<div className="absolute inset-0">
+  {!rightImageLoaded && (
+    <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+    </div>
+  )}
+  <img 
+    src="https://res.cloudinary.com/djgcv06ka/image/upload/v1760613841/46_z1w04o.png"
+    alt="Lingerie Background"
+    className={`w-full h-full object-cover md:object-cover sm:object-cover object-center transition-opacity duration-300 ${rightImageLoaded ? "opacity-100" : "opacity-0"}`}
+    loading="lazy"
+    onLoad={() => setRightImageLoaded(true)}
+  />
+</div>
+
 
           {/* Content */}
           <div className="relative z-10 text-white mb-4 sm:mb-6 md:mb-8 lg:mb-12">
