@@ -1,4 +1,3 @@
-// ProductDetail.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -53,12 +52,14 @@ const ProductDetail = () => {
   const [itemsPerPage, setItemsPerPage] = useState(4);
   const [addingToCart, setAddingToCart] = useState(false);
   const [addingToWishlist, setAddingToWishlist] = useState(false);
-  const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 }); // Added for zoom origin
+  const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 });
   const [loadedImages, setLoadedImages] = useState({});
+  const [isSizeChartOpen, setIsSizeChartOpen] = useState(false); // State for size chart modal
 
   // Refs
   const sectionRef = useRef(null);
   const similarProductsRef = useRef(null);
+  const sizeChartModalRef = useRef(null); // Ref for modal
 
   // Get current color object
   const selectedColor = currentProduct?.colors?.[selectedColorIndex];
@@ -222,10 +223,9 @@ const ProductDetail = () => {
     }
   }, [selectedColorIndex, selectedColor]);
 
-  // Animate product details + similar products - Fixed GSAP targets
+  // Animate product details + similar products
   useEffect(() => {
     if (!loading && !productLoading && currentProduct) {
-      // Use refs to ensure elements exist
       if (sectionRef.current) {
         gsap.fromTo(
           sectionRef.current,
@@ -234,7 +234,6 @@ const ProductDetail = () => {
         );
       }
 
-      // Add a delay to ensure similar products section is rendered
       const timer = setTimeout(() => {
         if (similarProductsRef.current) {
           gsap.fromTo(
@@ -249,19 +248,17 @@ const ProductDetail = () => {
     }
   }, [loading, productLoading, currentProduct]);
 
-  // Handle Buy It Now - Add to cart and navigate to checkout
+  // Handle Buy It Now
   const handleBuyNow = async () => {
     if (!currentProduct || !selectedColor || !selectedSize) return;
 
     setAddingToCart(true);
 
     try {
-      // Get current selected image
       const currentImages = selectedColor?.images || [];
       const selectedImage =
         currentImages[currentImageIndex] || currentImages[0] || "";
 
-      // Use the cart context to add to cart
       const result = await addToCartHandler(
         currentProduct,
         quantity,
@@ -271,7 +268,6 @@ const ProductDetail = () => {
       );
 
       if (result.success) {
-        // Navigate to checkout after successfully adding to cart
         navigate("/checkout");
       } else {
         console.error("Failed to add to cart for Buy Now");
@@ -283,19 +279,17 @@ const ProductDetail = () => {
     }
   };
 
-  // Handle add to cart with new API
+  // Handle add to cart
   const handleAddToCart = async () => {
     if (!currentProduct || !selectedColor || !selectedSize) return;
 
     setAddingToCart(true);
 
     try {
-      // Get current selected image
       const currentImages = selectedColor?.images || [];
       const selectedImage =
         currentImages[currentImageIndex] || currentImages[0] || "";
 
-      // Use the cart context to add to cart
       const result = await addToCartHandler(
         currentProduct,
         quantity,
@@ -314,7 +308,7 @@ const ProductDetail = () => {
     }
   };
 
-  // Handle wishlist toggle with new API
+  // Handle wishlist toggle
   const handleWishlistToggle = async () => {
     if (!currentProduct) return;
 
@@ -324,7 +318,6 @@ const ProductDetail = () => {
       if (isInWishlist) {
         await removeFromWishlist(currentProduct._id);
       } else {
-        // Transform product for wishlist
         const productForWishlist = {
           _id: currentProduct._id,
           id: currentProduct._id,
@@ -349,7 +342,7 @@ const ProductDetail = () => {
   // Handle color selection
   const handleColorChange = (colorIndex) => {
     setSelectedColorIndex(colorIndex);
-    setCurrentImageIndex(0); // Reset to first image of selected color
+    setCurrentImageIndex(0);
   };
 
   // Similar products carousel
@@ -365,9 +358,30 @@ const ProductDetail = () => {
     }
   };
 
+  // Handle size chart modal toggle
+  const handleSizeChartToggle = () => {
+    setIsSizeChartOpen(!isSizeChartOpen);
+  };
+
+  // Close modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (sizeChartModalRef.current && !sizeChartModalRef.current.contains(event.target)) {
+        setIsSizeChartOpen(false);
+      }
+    };
+
+    if (isSizeChartOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isSizeChartOpen]);
+
   // Helper components
   const ColorCircle = ({ color, size = "w-4 h-4", isSelected = false }) => {
-    // Use colorHex if available, otherwise default to a neutral color
     const colorValue = color.colorHex || "#CCCCCC";
 
     return (
@@ -383,7 +397,6 @@ const ProductDetail = () => {
     );
   };
 
-  // Fixed SimilarProductCard component
   const SimilarProductCard = ({ product }) => {
     const [currentColorIndex, setCurrentColorIndex] = useState(0);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -392,7 +405,6 @@ const ProductDetail = () => {
     const currentColor = product.colors?.[currentColorIndex];
     const currentImage = currentColor?.images?.[currentImageIndex];
 
-    // Use the helper function that's defined in the parent component scope
     const productCategoryName = getCategoryNameById(product.category);
 
     const handleProductClick = () => {
@@ -402,7 +414,7 @@ const ProductDetail = () => {
 
     const handleColorChange = (colorIndex) => {
       setCurrentColorIndex(colorIndex);
-      setCurrentImageIndex(0); // Reset image index when color changes
+      setCurrentImageIndex(0);
     };
 
     return (
@@ -410,7 +422,6 @@ const ProductDetail = () => {
         className="product-card bg-[#f9e2e7] rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
         onClick={handleProductClick}
       >
-        {/* Clean Product Image - No Overlays */}
         <div className="relative aspect-[3/4] bg-gray-50 overflow-hidden">
           {!loaded && (
             <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
@@ -433,34 +444,6 @@ const ProductDetail = () => {
         </div>
 
         <div className="p-3">
-          {/* 1. Available Colors Display 
-          <div className="flex items-center gap-1 mb-2">
-            <div className="flex gap-1">
-              {product.colors?.slice(0, 5).map((color, index) => (
-                <button
-                  key={color._id || index}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleColorChange(index);
-                  }}
-                  className="hover:scale-110 transition-transform"
-                >
-                  <ColorCircle
-                    color={color}
-                    size="w-6 h-6"
-                    isSelected={currentColorIndex === index}
-                  />
-                </button>
-              ))}
-              {product.colors?.length > 5 && (
-                <span className="text-xs text-gray-500">
-                  +{product.colors.length - 5}
-                </span>
-              )}
-            </div>
-          </div>*/}
-
-          {/* 2. Category Name */}
           {productCategoryName && (
             <div className="mb-2">
               <span className="text-xs text-gray-500 font-medium uppercase tracking-wide">
@@ -469,12 +452,10 @@ const ProductDetail = () => {
             </div>
           )}
 
-          {/* 3. Product Name */}
           <h3 className="text-gray-900 font-medium mb-2 text-sm line-clamp-2 min-h-[2.5rem]">
             {product.name}
           </h3>
 
-          {/* 4. Price Section */}
           <div className="flex items-baseline gap-2">
             <span className="text-lg font-bold text-gray-900">
               ₹{product.price?.toLocaleString("en-IN")}
@@ -723,7 +704,6 @@ const ProductDetail = () => {
                 )}
               </div>
 
-              {/* Thumbnails - show up to 4; last thumbnail shows +N if more */}
               <div className="flex gap-2 justify-center px-2">
                 {currentImages.slice(0, 4).map((img, idx) => (
                   <button
@@ -765,14 +745,12 @@ const ProductDetail = () => {
               {currentProduct.name}
             </h2>
 
-            {/* NEW: Subheading */}
             {currentProduct.subheading && (
               <p className="text-lg text-gray-600 font-bold">
                 {currentProduct.subheading}
               </p>
             )}
 
-            {/* Reviews Summary */}
             <div className="mb-4">
               <div className="flex items-center gap-2">
                 <div className="flex">
@@ -828,34 +806,14 @@ const ProductDetail = () => {
               </p>
             )}
 
-            {/* Colors */}
             {currentProduct.colors && currentProduct.colors.length > 0 && (
               <div>
                 <p className="font-bold mb-2 text-sm md:text-base ">
                   Color: {selectedColor?.colorName}
                 </p>
-                {/* <div className="flex gap-2 md:gap-3 flex-wrap ">
-                  {currentProduct.colors.map((color, idx) => (
-                    <button
-                      key={color._id}
-                      onClick={() => handleColorChange(idx)}
-                      className={`w-12 h-12 md:w-14 md:h-14 border-2 rounded-lg flex items-center justify-center p-1 ${
-                        selectedColorIndex === idx
-                          ? "border-black"
-                          : "border-gray-300 hover:border-gray-400"
-                      }`}
-                    >
-                      <ColorCircle
-                        color={color}
-                        size="w-8 h-8 md:w-10 md:h-10"
-                      />
-                    </button>
-                  ))}
-                </div> */}
               </div>
             )}
 
-            {/* Sizes */}
             {selectedColor?.sizeStock && selectedColor.sizeStock.length > 0 && (
               <div>
                 <p className="font-bold mb-2 text-sm md:text-base">
@@ -889,26 +847,58 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Size Chart Link */}
+            {/* Size Chart Button */}
             {currentProduct.sizeChart && (
               <div>
-                <a
-                  href={currentProduct.sizeChart}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-pink-600 hover:text-pink-700 text-sm underline"
+                <button
+                  onClick={handleSizeChartToggle}
+                  className="text-pink-600 hover:text-pink-700 text-sm underline focus:outline-none"
                 >
                   View Size Chart
-                </a>
+                </button>
               </div>
             )}
 
-            {/* Quantity + Cart */}
+            {/* Size Chart Modal */}
+            {isSizeChartOpen && currentProduct.sizeChart && (
+              <div className="fixed inset-0 bg-transparent bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+                <div
+                  ref={sizeChartModalRef}
+                  className="relative bg-white rounded-lg w-full h-full sm:max-w-[90vw] sm:max-h-[90vh] sm:m-4 flex items-center justify-center p-4"
+                >
+                  <button
+                    onClick={handleSizeChartToggle}
+                    className="absolute top-4 right-4 text-gray-600 hover:text-gray-800 z-10"
+                    aria-label="Close size chart"
+                  >
+                    <svg
+                      className="w-8 h-8"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                  <img
+                    src={currentProduct.sizeChart}
+                    alt="Size Chart"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
               <div className="flex items-center border-2 rounded w-fit bg-gray-200">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-3 py-2  hover:bg-gray-100"
+                  className="px-3 py-2 hover:bg-gray-100"
                 >
                   -
                 </button>
@@ -968,7 +958,6 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Moved Specifications Table here for full-width layout */}
         {currentProduct.specifications && currentProduct.specifications.length > 0 && (
           <div className="mt-6 lg:mt-12">
             <table className="w-full border-collapse bg-[#f9e2e7] rounded-lg overflow-hidden">
@@ -994,7 +983,6 @@ const ProductDetail = () => {
         )}
       </section>
 
-      {/* Similar Products */}
       {filteredSimilarProducts.length > 0 && (
         <section
           ref={similarProductsRef}
