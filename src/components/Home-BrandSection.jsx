@@ -233,8 +233,8 @@ const LingerieHeroSection = () => {
         <div 
           ref={rightSectionRef}
           className="w-full md:w-[30%] relative flex flex-col justify-end 
-                     min-h-[40vh] sm:min-h-[50vh] md:min-h-[70vh] lg:min-h-[80vh] xl:min-h-[90vh]
-                     px-4 py-6 sm:px-6 sm:py-8 md:px-6 md:py-8 lg:px-8 lg:py-10 xl:px-12 xl:py-12"
+                     min-h-[80vh] sm:min-h-[50vh] md:min-h-[70vh] lg:min-h-[80vh] xl:min-h-[90vh]
+                     px-4 py-6 sm:px-6 sm:py-8 md:px-6 md:py-8 lg:px-8 lg:py-10 xl:px-12 xl:py-12 "
         >
         {/* Background Image */}
 <div className="absolute inset-0">
