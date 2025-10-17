@@ -11,9 +11,9 @@ const HeroSlider = () => {
   const [loadedImages, setLoadedImages] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // Get banners from Redux store
-  const { banners, loading, error } = useSelector((state) =>
-    isMobile ? state.mobileBanners : state.banners
+  // Get banners from Redux store with fallback
+  const { banners = [], loading = false, error = null } = useSelector((state) =>
+    isMobile ? state.mobileBanners || {} : state.banners || {}
   );
 
   // Handle window resize to update isMobile

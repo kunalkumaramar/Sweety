@@ -12,6 +12,7 @@ import paymentReducer from './slices/paymentSlice';
 import blogsReducer from "./slices/blogsSlice";
 import bannerReducer from './slices/bannerSlice';
 import mobilebannerReducer from './slices/mobileBannerSlice';
+
 export const store = configureStore({
   reducer: {
     products: productsReducer,
@@ -24,7 +25,7 @@ export const store = configureStore({
     payment: paymentReducer,
     blogs: blogsReducer,
     banners: bannerReducer,
-    mobilebanners: mobilebannerReducer,
+    mobileBanners: mobilebannerReducer, // ✅ Changed to camelCase
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -33,4 +34,3 @@ export const store = configureStore({
       },
     }),
 });
-

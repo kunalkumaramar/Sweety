@@ -1,14 +1,16 @@
-// src/Redux/slices/bannerSlice.js
+// src/Redux/slices/mobileBannerSlice.js
+
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { apiService } from '../../services/api';
 
-// Async thunk to fetch banners
+// Async thunk to fetch mobile banners
 export const fetchMobileBanners = createAsyncThunk(
-  'banners/fetchBanners',
+  'mobileBanners/fetchMobileBanners',
   async (_, { rejectWithValue }) => {
     try {
       const response = await apiService.getMobileBanners();
-      return response.data;
+      // ✅ Extract the data array from response.data.data
+      return response.data; // Since API returns {data: [], statusCode, success}
     } catch (error) {
       return rejectWithValue(error.message || 'Failed to fetch banners');
     }
@@ -16,7 +18,7 @@ export const fetchMobileBanners = createAsyncThunk(
 );
 
 const mobileBannerSlice = createSlice({
-  name: 'banners',
+  name: 'mobileBanners',
   initialState: {
     banners: [],
     loading: false,
@@ -36,7 +38,10 @@ const mobileBannerSlice = createSlice({
       })
       .addCase(fetchMobileBanners.fulfilled, (state, action) => {
         state.loading = false;
-        state.banners = action.payload;
+        // ✅ Extract data array if response structure is {data: [], statusCode, success}
+        state.banners = Array.isArray(action.payload) 
+          ? action.payload 
+          : action.payload.data || [];
       })
       .addCase(fetchMobileBanners.rejected, (state, action) => {
         state.loading = false;
