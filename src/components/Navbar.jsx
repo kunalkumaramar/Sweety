@@ -60,9 +60,13 @@ const Navbar = () => {
     searchLoading: subcategoryLoading 
   } = useSelector(state => state.subcategories);
 
+  // Search results helpers (moved up for scope clarity)
+  const hasSearchResults = productResults.length > 0 || categoryResults.length > 0 || subcategoryResults.length > 0;
+  const isSearchLoading = productLoading || categoryLoading || subcategoryLoading;
+
   const SearchResultsDropdown = () => {
   return (
-    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-2xl z-50 max-h-96 overflow-y-auto">
+    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-2xl z-50 max-h-[500px] overflow-y-auto">
       {/* Tab Navigation */}
       <div className="flex border-b border-gray-200 bg-gray-50">
         <button
@@ -119,9 +123,12 @@ const Navbar = () => {
                     className="w-full flex items-center space-x-3 p-3 hover:bg-pink-50 rounded-lg transition-colors"
                   >
                     <img
-                      src={product.images?.[0] || '/placeholder.png'}
+                      src={product.colors?.[0]?.images?.[0] || '/placeholder.png'}
                       alt={product.name}
                       className="w-12 h-12 object-cover rounded"
+                      onError={(e) => {
+                        e.target.src = '/placeholder.png';
+                      }}
                     />
                     <div className="flex-1 text-left">
                       <p className="text-sm font-medium text-gray-800 line-clamp-1">
@@ -327,13 +334,16 @@ const Navbar = () => {
     if (mobileMenuOpen) setMobileMenuOpen(false);
   };
 
-  const handleViewAllResults = () => {
-    if (searchQuery.trim()) {
-      dispatch(setSearchQuery(searchQuery.trim()));
-      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-      setIsSearchDropdownOpen(false);
-      setSearchQueryState("");
+  const handleViewAllResults = (e) => {
+    e.preventDefault(); // Prevent any potential form submission or bubbling issues
+    e.stopPropagation(); // Ensure click doesn't trigger outside handlers
+    const trimmedQuery = searchQuery.trim();
+    if (trimmedQuery) {
+      dispatch(setSearchQuery(trimmedQuery));
+      navigate(`/products?search=${encodeURIComponent(trimmedQuery)}`);
     }
+    setIsSearchDropdownOpen(false);
+    setSearchQueryState("");
   };
 
   // Check if current page is active
@@ -357,10 +367,6 @@ const Navbar = () => {
   // Modal handlers
   const openSignIn = () => setIsSignInOpen(true);
   const closeSignIn = () => setIsSignInOpen(false);
-
-  // Search results helpers
-  const hasSearchResults = productResults.length > 0 || categoryResults.length > 0 || subcategoryResults.length > 0;
-  const isSearchLoading = productLoading || categoryLoading || subcategoryLoading;
 
   return (
     <>
@@ -387,7 +393,7 @@ const Navbar = () => {
             
             {/* Grid 1: Search Bar - 2 columns */}
             <div className="col-span-2 flex items-center justify-start">
-              <div className="w-full max-w-[200px] relative" ref={searchRef}>
+              <div className="w-full max-w-[350px] relative" ref={searchRef}>
                 <form onSubmit={handleSearch} className="relative">
                   <div className="flex items-center bg-white border-2 border-pink-400 rounded-sm px-3 py-2 focus-within:border-pink-500 focus-within:ring-2 focus-within:ring-pink-200">
                     <svg className="w-5 h-5 text-pink-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
