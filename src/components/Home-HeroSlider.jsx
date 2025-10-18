@@ -4,6 +4,59 @@ import { useNavigate } from "react-router-dom";
 import { fetchBanners } from "../Redux/slices/bannerSlice";
 import { fetchMobileBanners } from "../Redux/slices/mobileBannerSlice";
 
+// Cloudinary Image Optimization Component
+const CloudinaryImage = ({ src, alt, className, priority = false, ...props }) => {
+  const [isMobile] = useState(window.innerWidth < 768);
+
+  // Determine optimal width based on usage
+  const getOptimalWidth = () => {
+    if (priority) return isMobile ? 800 : 1920;
+    return isMobile ? 600 : 1200;
+  };
+
+  const getQuality = () => {
+    return priority ? 'auto:best' : 'auto:eco';
+  };
+
+  const optimizeUrl = (url) => {
+    if (!url?.includes('cloudinary.com')) return url;
+   
+    const width = getOptimalWidth();
+    const quality = getQuality();
+   
+    return url.replace(
+      '/upload/',
+      `/upload/f_auto,q_${quality},w_${width},c_limit/`
+    );
+  };
+
+  // Generate srcSet for responsive images
+  const generateSrcSet = () => {
+    if (!src?.includes('cloudinary.com')) return undefined;
+   
+    const widths = isMobile ? [480, 800] : [800, 1200, 1920];
+    const baseUrl = src.replace('/upload/', '/upload/f_auto,q_auto:eco/');
+    const path = src.split('/upload/')[1];
+   
+    return widths
+      .map(w => `${baseUrl}w_${w},c_limit/${path} ${w}w`)
+      .join(', ');
+  };
+
+  return (
+    <img
+      src={optimizeUrl(src)}
+      srcSet={generateSrcSet()}
+      sizes="100vw"
+      alt={alt}
+      className={className}
+      loading={priority ? 'eager' : 'lazy'}
+      fetchpriority={priority ? 'high' : undefined}
+      {...props}
+    />
+  );
+};
+
 const HeroSlider = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -15,15 +68,6 @@ const HeroSlider = () => {
   const { banners = [], loading = false, error = null } = useSelector((state) =>
     isMobile ? state.mobileBanners || {} : state.banners || {}
   );
-
-  // Banner image optimization helper
-  const optimizeBanner = (url) => {
-    if (!url) return url;
-    return url.replace(
-      '/upload/',
-      '/upload/f_auto,q_auto:eco,w_1920,c_limit/'
-    );
-  };
 
   // Handle window resize to update isMobile
   useEffect(() => {
@@ -48,6 +92,27 @@ const HeroSlider = () => {
   useEffect(() => {
     if (banners.length > 0) {
       setLoadedImages(new Array(banners.length).fill(false));
+    }
+  }, [banners]);
+
+  // Preload the first banner image (for LCP optimization)
+  useEffect(() => {
+    if (banners.length > 0) {
+      const firstBannerUrl = banners[0].imageUrl;
+      if (firstBannerUrl) {
+        const preloadUrl = firstBannerUrl.replace(
+          '/upload/',
+          '/upload/f_auto,q_auto:eco,w_800,c_limit/' // Mobile-optimized preload
+        );
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.fetchpriority = 'high';
+        link.href = preloadUrl;
+        document.head.appendChild(link);
+       
+        return () => document.head.removeChild(link);
+      }
     }
   }, [banners]);
 
@@ -98,7 +163,7 @@ const HeroSlider = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="relative h-[580px] lg:h-[680px] bg-gray-200 flex items-center justify-center">
+      <div className="relative h-[580px] lg:h-[680px] bg-gray-200 flex items-center justify-center" style={{ aspectRatio: '16 / 9' }}> {/* Reserve aspect ratio */}
         <div className="text-gray-600 text-xl">Loading banners...</div>
       </div>
     );
@@ -107,7 +172,7 @@ const HeroSlider = () => {
   // Error state
   if (error) {
     return (
-      <div className="relative h-[580px] lg:h-[680px] bg-gray-100 flex items-center justify-center">
+      <div className="relative h-[580px] lg:h-[680px] bg-gray-100 flex items-center justify-center" style={{ aspectRatio: '16 / 9' }}> {/* Reserve aspect ratio */}
         <div className="text-red-600 text-xl">Error loading banners: {error}</div>
       </div>
     );
@@ -116,14 +181,14 @@ const HeroSlider = () => {
   // No banners state
   if (!banners || banners.length === 0) {
     return (
-      <div className="relative h-[580px] lg:h-[680px] bg-gray-100 flex items-center justify-center">
+      <div className="relative h-[580px] lg:h-[680px] bg-gray-100 flex items-center justify-center" style={{ aspectRatio: '16 / 9' }}> {/* Reserve aspect ratio */}
         <div className="text-gray-600 text-xl">No banners available</div>
       </div>
     );
   }
 
   return (
-    <div className="relative w-full h-[580px] lg:h-[680px] overflow-hidden">
+    <div className="relative w-full h-[580px] lg:h-[680px] overflow-hidden" style={{ aspectRatio: '16 / 9' }}> {/* Reserve space for CLS */}
       {/* Slides Container */}
       <div className="relative w-full h-full">
         {banners.map((banner, index) => (
@@ -143,13 +208,13 @@ const HeroSlider = () => {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
                 </div>
               )}
-              <img
-                src={optimizeBanner(banner.imageUrl)}
+              <CloudinaryImage
+                src={banner.imageUrl}
                 alt={banner.name}
                 className={`w-full h-full object-cover transition-opacity duration-300 ${
                   loadedImages[index] ? "opacity-100" : "opacity-0"
                 }`}
-                loading={index === 0 ? "eager" : "lazy"}
+                priority={index === 0} // Only first banner eager
                 onLoad={() => {
                   setLoadedImages((prev) => {
                     const newLoaded = [...prev];
