@@ -76,6 +76,19 @@ const CloudinaryImage = forwardRef(({
   );
 });
 
+// Helper function to get optimized URL (extracted for preload use)
+const getOptimizedUrl = (url, isMobile, width = 400) => {
+  if (!url?.includes('cloudinary.com')) return url;
+ 
+  const parts = url.match(/(https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\/)([^\/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
+  if (!parts) return url;
+ 
+  const [, base, , ver, path, query] = parts;
+  const newTransforms = `f_auto,q_auto:eco,w_${width},c_limit`;
+ 
+  return `${base}${newTransforms}/v${ver}/${path}${query || ''}`;
+};
+
 const CircularProductCard = React.memo(
   ({ product, index, currentIndex, totalItems, isMobile, onCardClick }) => {
     const isMainCard = index === currentIndex;
@@ -130,7 +143,7 @@ const CircularProductCard = React.memo(
                 src={imageSrc}
                 alt={product.name}
                 className={`w-full h-auto max-h-72 object-contain transition-all duration-300 hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
-                priority={index === 0} // Prioritize first card
+                priority={index === currentIndex && currentIndex === 0} // Prioritize only the initial main card
                 sizes={cardSizes}
                 onLoad={() => setLoaded(true)}
               />
@@ -290,14 +303,13 @@ const FeaturedProducts = () => {
     localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
   }, [rawFeaturedProducts]);
 
-  // Preload the first product image if mobile (for LCP optimization)
+  // Preload the first product image if mobile (for LCP optimization) - Fixed regex issue
   useEffect(() => {
     if (isMobile && featuredProducts.length > 0) {
       const firstImage = featuredProducts[0].colors?.[0]?.images?.[0] ||
         featuredProducts[0].images?.[0];
       if (firstImage) {
-        // Simple optimization for preload
-        const preloadUrl = firstImage.replace(/\/upload\/[^\/]+/, '/upload/f_auto,q_auto:eco,w_400,c_limit/');
+        const preloadUrl = getOptimizedUrl(firstImage, isMobile, 400);
         const link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'image';
