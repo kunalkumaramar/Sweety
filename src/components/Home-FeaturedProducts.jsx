@@ -97,13 +97,13 @@ const CircularProductCard = React.memo(
     const cardTransform = useMemo(() => {
       const angleStep = (2 * Math.PI) / totalItems;
       const angle = (index - currentIndex) * angleStep;
-      const radius = isMobile ? 140 : 320; // Smaller radius on mobile for performance
+      const radius = isMobile ? 190 : 320;
       const x = Math.sin(angle) * radius;
       const z = Math.cos(angle) * radius;
       const scale =
-        z > 0 ? 1 : Math.max(isMobile ? 0.7 : 0.7, 0.7 + (z / radius) * 0.3); // Slightly larger min scale on mobile
-      const opacity = isMainCard ? 1 : (isMobile ? 0.8 : 0.7); // Higher opacity on mobile to reduce flicker
-      const tiltY = isMainCard ? 0 : x > 0 ? -10 : 10; // Reduced tilt on mobile
+        z > 0 ? 1 : Math.max(isMobile ? 0.6 : 0.7, 0.7 + (z / radius) * 0.3);
+      const opacity = isMainCard ? 1 : 0.7;
+      const tiltY = isMainCard ? 0 : x > 0 ? -15 : 15;
 
       return {
         transform: `translate3d(${x}px, 0, ${z}px) rotateY(${
@@ -118,7 +118,7 @@ const CircularProductCard = React.memo(
       product.images?.[0] ||
       "/placeholder.png";
 
-    const cardSizes = "(max-width: 768px) 140px, 265px"; // Adjusted for smaller mobile
+    const cardSizes = "(max-width: 768px) 160px, 265px";
 
     return (
       <div
@@ -127,13 +127,13 @@ const CircularProductCard = React.memo(
           transform: cardTransform.transform,
           opacity: cardTransform.opacity,
           zIndex: cardTransform.zIndex,
-          width: isMobile ? "140px" : "265px", // Smaller width on mobile
+          width: isMobile ? "160px" : "265px",
         }}
         onClick={() => onCardClick(product)}
       >
         <div className="bg-[#f9e2e7] overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-2">
-          <div className="sm:p-4">
-            <div className="bg-white p-1 relative overflow-hidden" style={{ aspectRatio: '1 / 1.2' }}> {/* Reserve space for CLS */}
+          <div className=" sm:p-4">
+            <div className="bg-white p-1 relative overflow-hidden">
               {!loaded && (
                 <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -142,8 +142,8 @@ const CircularProductCard = React.memo(
               <CloudinaryImage
                 src={imageSrc}
                 alt={product.name}
-                className={`w-full h-full object-contain transition-all duration-300 hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
-                priority={index === 0} // Only prioritize first card
+                className={`w-full h-auto max-h-72 object-contain transition-all duration-300 hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+                priority={index === currentIndex && currentIndex === 0} // Prioritize only the initial main card
                 sizes={cardSizes}
                 onLoad={() => setLoaded(true)}
               />
@@ -191,7 +191,6 @@ const FeaturedProducts = () => {
   const isUserInteracting = useRef(false);
   const touchStart = useRef({ x: 0, y: 0 });
   const touchEnd = useRef({ x: 0, y: 0 });
-  const rafRef = useRef(null); // For requestAnimationFrame
 
   const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
@@ -234,7 +233,7 @@ const FeaturedProducts = () => {
           const subcategoriesRes = await fetch(
             `${API_BASE_URL}/sub-category/category/${category._id}`
           );
-          const subcategoriesData = subcategoriesRes.json();
+          const subcategoriesData = await subcategoriesRes.json();
           const subcategories = subcategoriesData.data || [];
 
           if (subcategories.length > 0) {
@@ -304,7 +303,7 @@ const FeaturedProducts = () => {
     localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
   }, [rawFeaturedProducts]);
 
-  // Preload the first product image if mobile (for LCP optimization)
+  // Preload the first product image if mobile (for LCP optimization) - Fixed regex issue
   useEffect(() => {
     if (isMobile && featuredProducts.length > 0) {
       const firstImage = featuredProducts[0].colors?.[0]?.images?.[0] ||
@@ -375,18 +374,6 @@ const FeaturedProducts = () => {
       if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
     };
   }, [total, currentIndex, isMobile]);
-
-  // Use requestAnimationFrame for smoother updates on mobile
-  useEffect(() => {
-    if (isMobile) {
-      const animate = () => {
-        // Any animation logic here if needed; currently used for rafRef cleanup
-        rafRef.current = requestAnimationFrame(animate);
-      };
-      animate();
-      return () => cancelAnimationFrame(rafRef.current);
-    }
-  }, [isMobile]);
 
   const handlePrevious = useCallback(() => {
     if (isMobile) {
@@ -471,10 +458,10 @@ const FeaturedProducts = () => {
         <div
           ref={containerRef}
           className={`relative ${
-            isMobile ? "h-[400px]" : "h-[600px]" // Slightly shorter on mobile
+            isMobile ? "h-[450px]" : "h-[600px]"
           } flex items-center justify-center transform-gpu sm:overflow-visible overflow-x-hidden`}
           style={{
-            perspective: isMobile ? "500px" : "900px", // Reduced perspective on mobile
+            perspective: isMobile ? "700px" : "900px",
             perspectiveOrigin: "center center",
           }}
         >
@@ -526,7 +513,7 @@ const FeaturedProducts = () => {
           }
           @media (max-width: 768px) {
             .transform-gpu {
-              perspective: 400px; // Further reduced for mobile
+              perspective: 600px;
             }
           }
         `}
