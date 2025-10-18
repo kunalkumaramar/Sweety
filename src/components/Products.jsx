@@ -108,13 +108,39 @@ const Products = ({
     return category ? category.name : "";
   };
 
-  // Image optimization helper
-  const optimizeImage = (url, width = 1920) => {
-    if (!url) return url;
+  // Updated image optimization helper based on device and usage
+  const optimizeCloudinaryUrl = (url, options = {}) => {
+    const {
+      width,
+      quality = 'auto:eco',
+      isThumbnail = false,
+      isMobile = window.innerWidth < 768,
+    } = options;
+ 
+    if (!url || !url.includes('cloudinary.com')) return url;
+ 
+    // Smart width selection
+    let targetWidth = width;
+    if (!targetWidth) {
+      if (isThumbnail) targetWidth = 150;
+      else if (isMobile) targetWidth = 400; // Mobile content
+      else targetWidth = 600; // Desktop content for product cards
+    }
+ 
     return url.replace(
       '/upload/',
-      `/upload/f_auto,q_auto:eco,w_${width}/`
+      `/upload/f_auto,q_${quality},w_${targetWidth},c_limit/`
     );
+  };
+
+  // Generate srcSet for responsive images
+  const generateSrcSet = (baseUrl, path) => {
+    if (!baseUrl || !path) return undefined;
+    const baseOptimized = baseUrl.replace('/upload/', '/upload/f_auto,q_auto:eco/');
+    const widths = window.innerWidth < 768 ? [200, 400] : [400, 600, 800];
+    return widths
+      .map(w => `${baseOptimized}w_${w},c_limit/${path} ${w}w`)
+      .join(', ');
   };
 
   // Load categories on component mount
@@ -510,6 +536,8 @@ const Products = ({
 
     const currentColor = product.colors?.[currentColorIndex];
     const currentImage = currentColor?.images?.[currentImageIndex];
+    const currentImageUrl = currentImage || product.colors?.[0]?.images?.[0];
+    const imagePath = currentImageUrl ? currentImageUrl.split('/upload/')[1] : null;
 
     // Get category name for this product
     const productCategoryName = getCategoryNameById(product.category);
@@ -524,6 +552,10 @@ const Products = ({
       setCurrentImageIndex(0); // Reset image index when color changes
     };
 
+    const optimizedSrc = optimizeCloudinaryUrl(currentImageUrl, { quality: 'auto:eco' });
+    const srcSet = generateSrcSet(currentImageUrl, imagePath);
+    const sizes = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw";
+
     return (
       <div
         className="product-card bg-[#f9e2e7] rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group"
@@ -537,7 +569,9 @@ const Products = ({
             </div>
           )}
           <img
-            src={optimizeImage(currentImage || product.colors?.[0]?.images?.[0])}
+            src={optimizedSrc}
+            srcSet={srcSet}
+            sizes={sizes}
             alt={product.name}
             className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
             loading="lazy"

@@ -1,19 +1,85 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, forwardRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+
+// Cloudinary Image Optimization Component
+const CloudinaryImage = forwardRef(({ 
+  src, 
+  alt, 
+  className, 
+  priority = false, 
+  thumbnail = false, 
+  sizes = '100vw',
+  ...props 
+}, ref) => {
+  const [isMobile] = useState(window.innerWidth < 768);
+
+  // Determine optimal width for src fallback
+  const getOptimalWidth = () => {
+    if (thumbnail) return 150;
+    if (priority) return isMobile ? 800 : 1200;
+    return isMobile ? 400 : 600; // Adjusted for product cards
+  };
+
+  const getQuality = () => {
+    if (thumbnail) return 'auto:low';
+    return priority ? 'auto:best' : 'auto:eco';
+  };
+
+  const optimizeUrl = (url) => {
+    if (!url?.includes('cloudinary.com')) return url;
+   
+    const parts = url.match(/(https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\/)([^\/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
+    if (!parts) return url;
+   
+    const [, base, , ver, path, query] = parts;
+    const width = getOptimalWidth();
+    const quality = getQuality();
+    const newTransforms = `f_auto,q_${quality},w_${width},c_limit`;
+   
+    return `${base}${newTransforms}/v${ver}/${path}${query || ''}`;
+  };
+
+  // Generate srcSet for responsive images
+  const generateSrcSet = () => {
+    if (thumbnail || !src?.includes('cloudinary.com')) return undefined;
+   
+    const parts = src.match(/(https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\/)([^\/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
+    if (!parts) return undefined;
+   
+    const [, base, , ver, path, query] = parts;
+    const q = 'auto:eco';
+   
+    let srcSetWidths;
+    if (priority) {
+      srcSetWidths = isMobile ? [400, 800, 1200] : [600, 1200, 1920];
+    } else {
+      srcSetWidths = isMobile ? [200, 400] : [400, 600];
+    }
+   
+    return srcSetWidths
+      .map(w => `${base}f_auto,q_${q},w_${w},c_limit/v${ver}/${path}${query || ''} ${w}w`)
+      .join(', ');
+  };
+
+  return (
+    <img
+      ref={ref}
+      src={optimizeUrl(src)}
+      srcSet={generateSrcSet()}
+      sizes={sizes}
+      alt={alt}
+      className={className}
+      loading={priority ? 'eager' : 'lazy'}
+      fetchpriority={priority ? 'high' : undefined}
+      {...props}
+    />
+  );
+});
 
 const CircularProductCard = React.memo(
   ({ product, index, currentIndex, totalItems, isMobile, onCardClick }) => {
     const isMainCard = index === currentIndex;
     const [loaded, setLoaded] = useState(false);
-
-    // Image optimization helper
-    const optimizeImage = (url, width = 800) => {
-      if (!url) return url;
-      return url.replace(
-        '/upload/',
-        `/upload/f_auto,q_auto:good,w_${width},c_limit/`
-      );
-    };
 
     const cardTransform = useMemo(() => {
       const angleStep = (2 * Math.PI) / totalItems;
@@ -35,6 +101,12 @@ const CircularProductCard = React.memo(
       };
     }, [index, currentIndex, totalItems, isMainCard, isMobile]);
 
+    const imageSrc = product.colors?.[0]?.images?.[0] ||
+      product.images?.[0] ||
+      "/placeholder.png";
+
+    const cardSizes = "(max-width: 768px) 160px, 265px";
+
     return (
       <div
         className="absolute transition-all duration-500 ease-out cursor-pointer will-change-transform overflow-x-hidden"
@@ -54,17 +126,12 @@ const CircularProductCard = React.memo(
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                 </div>
               )}
-              <img
-                src={optimizeImage(
-                  product.colors?.[0]?.images?.[0] ||
-                  product.images?.[0] ||
-                  "/placeholder.png"
-                )}
+              <CloudinaryImage
+                src={imageSrc}
                 alt={product.name}
-                className={`w-full h-auto max-h-72 object-contain transition-all duration-300 hover:scale-105 ${
-                  loaded ? "opacity-100" : "opacity-0"
-                }`}
-                loading="lazy"
+                className={`w-full h-auto max-h-72 object-contain transition-all duration-300 hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+                priority={index === 0} // Prioritize first card
+                sizes={cardSizes}
                 onLoad={() => setLoaded(true)}
               />
               <div className="absolute inset-0 bg-transparent bg-opacity-0 hover:bg-opacity-10 transition-all duration-300"></div>
@@ -222,6 +289,26 @@ const FeaturedProducts = () => {
     localStorage.setItem(cacheKey, JSON.stringify(rawFeaturedProducts));
     localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
   }, [rawFeaturedProducts]);
+
+  // Preload the first product image if mobile (for LCP optimization)
+  useEffect(() => {
+    if (isMobile && featuredProducts.length > 0) {
+      const firstImage = featuredProducts[0].colors?.[0]?.images?.[0] ||
+        featuredProducts[0].images?.[0];
+      if (firstImage) {
+        // Simple optimization for preload
+        const preloadUrl = firstImage.replace(/\/upload\/[^\/]+/, '/upload/f_auto,q_auto:eco,w_400,c_limit/');
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.fetchpriority = 'high';
+        link.href = preloadUrl;
+        document.head.appendChild(link);
+       
+        return () => document.head.removeChild(link);
+      }
+    }
+  }, [featuredProducts, isMobile]);
 
   // Auto-scroll (mobile)
   useEffect(() => {

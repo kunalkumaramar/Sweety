@@ -1,10 +1,83 @@
 // sweetyintimate/src/components/Home-BrandSection.jsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { gsap } from 'gsap';
 import { getAllSubcategories } from '../Redux/slices/subcategorySlice';
 import { getCategories } from '../Redux/slices/categorySlice';
+
+// Cloudinary Image Optimization Component
+const CloudinaryImage = forwardRef(({ 
+  src, 
+  alt, 
+  className, 
+  priority = false, 
+  sizes = '100vw',
+  ...props 
+}, ref) => {
+  const [isMobile] = useState(window.innerWidth < 768);
+
+  // Determine optimal width for src fallback
+  const getOptimalWidth = () => {
+    if (priority) return isMobile ? 800 : 1920;
+    return isMobile ? 600 : 1200;
+  };
+
+  const getQuality = () => {
+    return priority ? 'auto:best' : 'auto:eco';
+  };
+
+  const optimizeUrl = (url) => {
+    if (!url?.includes('cloudinary.com')) return url;
+   
+    // Handle Cloudinary URL with version
+    const parts = url.match(/(https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\/)([^\/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
+    if (!parts) return url;
+   
+    const [, base, , ver, path, query] = parts;
+    const width = getOptimalWidth();
+    const quality = getQuality();
+    const newTransforms = `f_auto,q_${quality},w_${width},c_limit`;
+   
+    return `${base}${newTransforms}/v${ver}/${path}${query || ''}`;
+  };
+
+  // Generate srcSet for responsive images
+  const generateSrcSet = () => {
+    if (!src?.includes('cloudinary.com')) return undefined;
+   
+    const parts = src.match(/(https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\/)([^\/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
+    if (!parts) return undefined;
+   
+    const [, base, , ver, path, query] = parts;
+    const q = 'auto:eco';
+   
+    let srcSetWidths;
+    if (priority) {
+      srcSetWidths = isMobile ? [480, 800, 1200] : [800, 1200, 1920];
+    } else {
+      srcSetWidths = isMobile ? [480, 800] : [800, 1200];
+    }
+   
+    return srcSetWidths
+      .map(w => `${base}f_auto,q_${q},w_${w},c_limit/v${ver}/${path}${query || ''} ${w}w`)
+      .join(', ');
+  };
+
+  return (
+    <img
+      ref={ref}
+      src={optimizeUrl(src)}
+      srcSet={generateSrcSet()}
+      sizes={sizes}
+      alt={alt}
+      className={className}
+      loading={priority ? 'eager' : 'lazy'}
+      fetchpriority={priority ? 'high' : undefined}
+      {...props}
+    />
+  );
+});
 
 const LingerieHeroSection = () => {
   const navigate = useNavigate();
@@ -21,6 +94,7 @@ const LingerieHeroSection = () => {
 
   const [leftImageLoaded, setLeftImageLoaded] = useState(false);
   const [rightImageLoaded, setRightImageLoaded] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Fetch subcategories and categories on mount
   useEffect(() => {
@@ -31,6 +105,32 @@ const LingerieHeroSection = () => {
       dispatch(getCategories());
     }
   }, [dispatch, subcategories.length, categories.length]);
+
+  // Handle window resize to update isMobile
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Preload the left image if mobile (for LCP optimization)
+  useEffect(() => {
+    if (isMobile) {
+      const leftUrl = "https://res.cloudinary.com/dhezrgjf6/image/upload/f_auto,q_auto:eco,w_800/v1759750904/prd3_q8a5wg.jpg";
+      // Simple optimization for preload
+      const preloadUrl = leftUrl.replace(/\/upload\/[^\/]+/, '/upload/f_auto,q_auto:eco,w_800,c_limit/');
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.fetchpriority = 'high';
+      link.href = preloadUrl;
+      document.head.appendChild(link);
+     
+      return () => document.head.removeChild(link);
+    }
+  }, [isMobile]);
 
   // Helper function to get category by subcategory
   const getCategoryForSubcategory = (subcategory) => {
@@ -139,6 +239,9 @@ const LingerieHeroSection = () => {
     ? [...subcategories, ...subcategories, ...subcategories]
     : [];
 
+  const leftSizes = "(min-width: 768px) 70vw, 100vw";
+  const rightSizes = "(min-width: 768px) 30vw, 100vw";
+
   return (
     <div className="w-full bg-gray-50">
       {/* Category Strip */}
@@ -187,11 +290,12 @@ const LingerieHeroSection = () => {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
               </div>
             )}
-            <img 
+            <CloudinaryImage 
               src="https://res.cloudinary.com/dhezrgjf6/image/upload/f_auto,q_auto:eco,w_800/v1759750904/prd3_q8a5wg.jpg"
               alt="Lingerie Background"
               className={`w-full h-full object-cover object-center transition-opacity duration-300 ${leftImageLoaded ? "opacity-100" : "opacity-0"}`}
-              loading="lazy"
+              priority={true}
+              sizes={leftSizes}
               onLoad={() => setLeftImageLoaded(true)}
             />
             <div className="absolute inset-0 bg-opacity-20 md:bg-transparent"></div>
@@ -236,22 +340,21 @@ const LingerieHeroSection = () => {
                      min-h-[80vh] sm:min-h-[50vh] md:min-h-[70vh] lg:min-h-[80vh] xl:min-h-[90vh]
                      px-4 py-6 sm:px-6 sm:py-8 md:px-6 md:py-8 lg:px-8 lg:py-10 xl:px-12 xl:py-12 "
         >
-        {/* Background Image */}
-<div className="absolute inset-0">
-  {!rightImageLoaded && (
-    <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-    </div>
-  )}
-  <img 
-    src="https://res.cloudinary.com/djgcv06ka/image/upload/f_auto,q_auto:eco,w_800/v1760613841/46_z1w04o.png"
-    alt="Lingerie Background"
-    className={`w-full h-full object-cover md:object-cover sm:object-cover object-center transition-opacity duration-300 ${rightImageLoaded ? "opacity-100" : "opacity-0"}`}
-    loading="lazy"
-    onLoad={() => setRightImageLoaded(true)}
-  />
-</div>
-
+          {/* Background Image */}
+          <div className="absolute inset-0">
+            {!rightImageLoaded && (
+              <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+              </div>
+            )}
+            <CloudinaryImage 
+              src="https://res.cloudinary.com/djgcv06ka/image/upload/f_auto,q_auto:eco,w_800/v1760613841/46_z1w04o.png"
+              alt="Lingerie Background"
+              className={`w-full h-full object-cover md:object-cover sm:object-cover object-center transition-opacity duration-300 ${rightImageLoaded ? "opacity-100" : "opacity-0"}`}
+              sizes={rightSizes}
+              onLoad={() => setRightImageLoaded(true)}
+            />
+          </div>
 
           {/* Content */}
           <div className="relative z-10 text-white mb-4 sm:mb-6 md:mb-8 lg:mb-12">

@@ -4,6 +4,61 @@ import { useNavigate } from "react-router-dom";
 import { fetchBanners } from "../Redux/slices/bannerSlice";
 import { fetchMobileBanners } from "../Redux/slices/mobileBannerSlice";
 
+// Cloudinary Image Optimization Component
+const CloudinaryImage = ({ src, alt, className, priority = false, thumbnail = false, ...props }) => {
+  const [isMobile] = useState(window.innerWidth < 768);
+
+  // Determine optimal width based on usage
+  const getOptimalWidth = () => {
+    if (thumbnail) return 150;
+    if (isMobile) return priority ? 800 : 600;
+    return priority ? 1920 : 1200;
+  };
+
+  const getQuality = () => {
+    if (thumbnail) return 'auto:low';
+    return priority ? 'auto:best' : 'auto:eco';
+  };
+
+  const optimizeUrl = (url) => {
+    if (!url?.includes('cloudinary.com')) return url;
+   
+    const width = getOptimalWidth();
+    const quality = getQuality();
+   
+    return url.replace(
+      '/upload/',
+      `/upload/f_auto,q_${quality},w_${width},c_limit/`
+    );
+  };
+
+  // Generate srcSet for responsive images
+  const generateSrcSet = () => {
+    if (thumbnail || !src?.includes('cloudinary.com')) return undefined;
+   
+    const widths = isMobile ? [480, 800] : [800, 1200, 1920];
+    const baseUrl = src.replace('/upload/', '/upload/f_auto,q_auto:eco/');
+    const path = src.split('/upload/')[1];
+   
+    return widths
+      .map(w => `${baseUrl}w_${w},c_limit/${path} ${w}w`)
+      .join(', ');
+  };
+
+  return (
+    <img
+      src={optimizeUrl(src)}
+      srcSet={generateSrcSet()}
+      sizes={thumbnail ? '75px' : '100vw'}
+      alt={alt}
+      className={className}
+      loading={priority ? 'eager' : 'lazy'}
+      fetchpriority={priority ? 'high' : undefined}
+      {...props}
+    />
+  );
+};
+
 const HeroSlider = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -15,15 +70,6 @@ const HeroSlider = () => {
   const { banners = [], loading = false, error = null } = useSelector((state) =>
     isMobile ? state.mobileBanners || {} : state.banners || {}
   );
-
-  // Banner image optimization helper
-  const optimizeBanner = (url) => {
-    if (!url) return url;
-    return url.replace(
-      '/upload/',
-      '/upload/f_auto,q_auto:eco,w_1920,c_limit/'
-    );
-  };
 
   // Handle window resize to update isMobile
   useEffect(() => {
@@ -48,6 +94,23 @@ const HeroSlider = () => {
   useEffect(() => {
     if (banners.length > 0) {
       setLoadedImages(new Array(banners.length).fill(false));
+    }
+  }, [banners]);
+
+  // Preload the first banner image if available (for LCP optimization)
+  useEffect(() => {
+    if (banners.length > 0) {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.fetchpriority = 'high';
+      link.href = banners[0].imageUrl?.replace(
+        '/upload/',
+        '/upload/f_auto,q_auto:eco,w_800,c_limit/' // Optimized for mobile, but works for desktop too
+      );
+      document.head.appendChild(link);
+     
+      return () => document.head.removeChild(link);
     }
   }, [banners]);
 
@@ -143,13 +206,13 @@ const HeroSlider = () => {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
                 </div>
               )}
-              <img
-                src={optimizeBanner(banner.imageUrl)}
+              <CloudinaryImage
+                src={banner.imageUrl}
                 alt={banner.name}
                 className={`w-full h-full object-cover transition-opacity duration-300 ${
                   loadedImages[index] ? "opacity-100" : "opacity-0"
                 }`}
-                loading={index === 0 ? "eager" : "lazy"}
+                priority={index === 0} // Prioritize first banner for LCP
                 onLoad={() => {
                   setLoadedImages((prev) => {
                     const newLoaded = [...prev];
