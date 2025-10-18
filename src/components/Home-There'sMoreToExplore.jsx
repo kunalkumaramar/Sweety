@@ -4,61 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getCategories } from "../Redux/slices/categorySlice";
 
-// Cloudinary Image Optimization Component
-const CloudinaryImage = ({ src, alt, className, priority = false, thumbnail = false, ...props }) => {
-  const [isMobile] = useState(window.innerWidth < 768);
-
-  // Determine optimal width based on usage
-  const getOptimalWidth = () => {
-    if (thumbnail) return 150;
-    if (isMobile) return priority ? 800 : 600;
-    return priority ? 1920 : 1200;
-  };
-
-  const getQuality = () => {
-    if (thumbnail) return 'auto:low';
-    return priority ? 'auto:best' : 'auto:eco';
-  };
-
-  const optimizeUrl = (url) => {
-    if (!url?.includes('cloudinary.com')) return url;
-   
-    const width = getOptimalWidth();
-    const quality = getQuality();
-   
-    return url.replace(
-      '/upload/',
-      `/upload/f_auto,q_${quality},w_${width},c_limit/`
-    );
-  };
-
-  // Generate srcSet for responsive images
-  const generateSrcSet = () => {
-    if (thumbnail || !src?.includes('cloudinary.com')) return undefined;
-   
-    const widths = isMobile ? [480, 800] : [800, 1200, 1920];
-    const baseUrl = src.replace('/upload/', '/upload/f_auto,q_auto:eco/');
-    const path = src.split('/upload/')[1];
-   
-    return widths
-      .map(w => `${baseUrl}w_${w},c_limit/${path} ${w}w`)
-      .join(', ');
-  };
-
-  return (
-    <img
-      src={optimizeUrl(src)}
-      srcSet={generateSrcSet()}
-      sizes={thumbnail ? '75px' : '(max-width: 768px) 100vw, 50vw'}
-      alt={alt}
-      className={className}
-      loading={priority ? 'eager' : 'lazy'}
-      fetchpriority={priority ? 'high' : undefined}
-      {...props}
-    />
-  );
-};
-
 const IntimatesCarousel = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -67,8 +12,16 @@ const IntimatesCarousel = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(4);
   const [loadedImages, setLoadedImages] = useState({});
-  const [isMobile] = useState(window.innerWidth < 768);
   const containerRef = useRef(null);
+
+  // Image optimization helper
+  const optimizeImage = (url, width = 400) => {
+    if (!url) return url;
+    return url.replace(
+      '/upload/',
+      `/upload/f_auto,q_auto:eco,w_${width}/`
+    );
+  };
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -88,23 +41,6 @@ const IntimatesCarousel = () => {
     window.addEventListener('resize', updateItemsPerPage);
     return () => window.removeEventListener('resize', updateItemsPerPage);
   }, []);
-
-  // Preload the first category image if available (for LCP optimization)
-  useEffect(() => {
-    if (categories.length > 0 && isMobile) {
-      const link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = 'image';
-      link.fetchpriority = 'high';
-      link.href = categories[0].image?.replace(
-        '/upload/',
-        '/upload/f_auto,q_auto:eco,w_800,c_limit/'
-      );
-      document.head.appendChild(link);
-     
-      return () => document.head.removeChild(link);
-    }
-  }, [categories, isMobile]);
 
   // Load GSAP
   useEffect(() => {
@@ -236,7 +172,7 @@ const IntimatesCarousel = () => {
               transform: `translateX(-${currentIndex * cardWidthPercentage}%)`,
             }}
           >
-            {categories.map((category, index) => (
+            {categories.map((category) => (
               <div
                 key={category._id}
                 onClick={() => handleCategoryClick(category)}
@@ -253,11 +189,11 @@ const IntimatesCarousel = () => {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                       </div>
                     )}
-                    <CloudinaryImage
-                      src={category.image || 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop&crop=center'}
+                    <img
+                      src={optimizeImage(category.image) || 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop&crop=center'}
                       alt={category.name}
                       className={`w-full h-48 sm:h-56 md:h-64 lg:h-80 object-cover transition-all duration-500 group-hover:scale-105 ${loadedImages[category._id] ? "opacity-100" : "opacity-0"}`}
-                      priority={index === 0} // Prioritize first image for LCP
+                      loading="lazy"
                       onLoad={() => setLoadedImages(prev => ({...prev, [category._id]: true}))}
                       onError={(e) => {
                         e.target.src = 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop&crop=center';
