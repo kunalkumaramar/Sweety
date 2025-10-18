@@ -228,46 +228,69 @@ const FeaturedProducts = () => {
         const categoriesRes = await fetch(`${API_BASE_URL}/category`);
         const categoriesData = await categoriesRes.json();
         const categories = categoriesData.data || [];
-        const products = [];
 
-        for (const category of categories) {
+        // Fetch all subcategories for all categories in parallel
+        const categoryWithSubcatsPromises = categories.map(async (category) => {
           const subcategoriesRes = await fetch(
             `${API_BASE_URL}/sub-category/category/${category._id}`
           );
-          const subcategoriesData = subcategoriesRes.json();
+          const subcategoriesData = await subcategoriesRes.json();
           const subcategories = subcategoriesData.data || [];
+          return { category, subcategories };
+        });
 
+        const categoryWithSubcats = await Promise.all(categoryWithSubcatsPromises);
+
+        // Now fetch products from all subcategories and categories in parallel
+        const productPromises = [];
+
+        for (const { category, subcategories } of categoryWithSubcats) {
           if (subcategories.length > 0) {
+            // Add promises for each subcategory product
             for (const subcategory of subcategories) {
-              const productsRes = await fetch(
-                `${API_BASE_URL}/product/subcategory/${subcategory._id}?page=1&limit=1&isActive=true`
+              productPromises.push(
+                fetch(`${API_BASE_URL}/product/subcategory/${subcategory._id}?page=1&limit=1&isActive=true`)
+                  .then((res) => res.json())
+                  .then((data) => {
+                    const latestProduct = data.data?.products?.[0];
+                    if (latestProduct) {
+                      return {
+                        ...latestProduct,
+                        categoryName: category.name,
+                        subcategoryName: subcategory.name,
+                      };
+                    }
+                    return null;
+                  })
+                  .catch(() => null)
               );
-              const productsData = await productsRes.json();
-              const latestProduct = productsData.data?.products?.[0];
-              if (latestProduct) {
-                products.push({
-                  ...latestProduct,
-                  categoryName: category.name,
-                  subcategoryName: subcategory.name,
-                });
-              }
             }
           } else {
-            const productsRes = await fetch(
-              `${API_BASE_URL}/product/category/${category._id}?page=1&limit=1`
+            // Add promise for category product (if no subcategories)
+            productPromises.push(
+              fetch(`${API_BASE_URL}/product/category/${category._id}?page=1&limit=1&isActive=true`)
+                .then((res) => res.json())
+                .then((data) => {
+                  const latestProduct = data.data?.products?.[0];
+                  if (latestProduct) {
+                    return {
+                      ...latestProduct,
+                      categoryName: category.name,
+                      subcategoryName: null,
+                    };
+                  }
+                  return null;
+                })
+                .catch(() => null)
             );
-            const productsData = await productsRes.json();
-            const latestProduct = productsData.data?.products?.[0];
-            if (latestProduct) {
-              products.push({
-                ...latestProduct,
-                categoryName: category.name,
-                subcategoryName: null,
-              });
-            }
           }
         }
 
+        // Wait for all product fetches to complete
+        const allProducts = await Promise.all(productPromises);
+        const products = allProducts.filter((p) => p !== null);
+
+        console.log(`Fetched ${products.length} total products from ${productPromises.length} requests`);
         setRawFeaturedProducts(products);
         setError(null);
       } catch (err) {
@@ -285,12 +308,8 @@ const FeaturedProducts = () => {
     const now = Date.now();
     const cacheExpiry = 3600000; // 1 hour
 
-    if (cached && cacheTime && now - parseInt(cacheTime) < cacheExpiry) {
-      setRawFeaturedProducts(JSON.parse(cached));
-      setLoading(false);
-    } else {
-      fetchFeaturedProducts();
-    }
+    // Always fetch fresh data - remove cache to see all products
+    fetchFeaturedProducts();
   }, [API_BASE_URL]);
 
   useEffect(() => {
