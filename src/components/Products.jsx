@@ -108,6 +108,15 @@ const Products = ({
     return category ? category.name : "";
   };
 
+  // Image optimization helper
+  const optimizeImage = (url, width = 1920) => {
+    if (!url) return url;
+    return url.replace(
+      '/upload/',
+      `/upload/f_auto,q_auto:eco,w_${width}/`
+    );
+  };
+
   // Load categories on component mount
   useEffect(() => {
     if (categories.length === 0) {
@@ -528,7 +537,7 @@ const Products = ({
             </div>
           )}
           <img
-            src={currentImage || product.colors?.[0]?.images?.[0]}
+            src={optimizeImage(currentImage || product.colors?.[0]?.images?.[0])}
             alt={product.name}
             className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
             loading="lazy"

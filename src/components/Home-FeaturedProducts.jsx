@@ -6,6 +6,15 @@ const CircularProductCard = React.memo(
     const isMainCard = index === currentIndex;
     const [loaded, setLoaded] = useState(false);
 
+    // Image optimization helper
+    const optimizeImage = (url, width = 800) => {
+      if (!url) return url;
+      return url.replace(
+        '/upload/',
+        `/upload/f_auto,q_auto:good,w_${width},c_limit/`
+      );
+    };
+
     const cardTransform = useMemo(() => {
       const angleStep = (2 * Math.PI) / totalItems;
       const angle = (index - currentIndex) * angleStep;
@@ -46,11 +55,11 @@ const CircularProductCard = React.memo(
                 </div>
               )}
               <img
-                src={
+                src={optimizeImage(
                   product.colors?.[0]?.images?.[0] ||
                   product.images?.[0] ||
                   "/placeholder.png"
-                }
+                )}
                 alt={product.name}
                 className={`w-full h-auto max-h-72 object-contain transition-all duration-300 hover:scale-105 ${
                   loaded ? "opacity-100" : "opacity-0"

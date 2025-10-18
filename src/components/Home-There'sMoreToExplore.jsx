@@ -14,6 +14,15 @@ const IntimatesCarousel = () => {
   const [loadedImages, setLoadedImages] = useState({});
   const containerRef = useRef(null);
 
+  // Image optimization helper
+  const optimizeImage = (url, width = 400) => {
+    if (!url) return url;
+    return url.replace(
+      '/upload/',
+      `/upload/f_auto,q_auto:eco,w_${width}/`
+    );
+  };
+
   // Fetch categories on component mount
   useEffect(() => {
     dispatch(getCategories());
@@ -181,7 +190,7 @@ const IntimatesCarousel = () => {
                       </div>
                     )}
                     <img
-                      src={category.image || 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop&crop=center'}
+                      src={optimizeImage(category.image) || 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop&crop=center'}
                       alt={category.name}
                       className={`w-full h-48 sm:h-56 md:h-64 lg:h-80 object-cover transition-all duration-500 group-hover:scale-105 ${loadedImages[category._id] ? "opacity-100" : "opacity-0"}`}
                       loading="lazy"

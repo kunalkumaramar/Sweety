@@ -188,7 +188,7 @@ const LingerieHeroSection = () => {
               </div>
             )}
             <img 
-              src="https://res.cloudinary.com/dhezrgjf6/image/upload/v1759750904/prd3_q8a5wg.jpg"
+              src="https://res.cloudinary.com/dhezrgjf6/image/upload/f_auto,q_auto:eco,w_800/v1759750904/prd3_q8a5wg.jpg"
               alt="Lingerie Background"
               className={`w-full h-full object-cover object-center transition-opacity duration-300 ${leftImageLoaded ? "opacity-100" : "opacity-0"}`}
               loading="lazy"
@@ -244,7 +244,7 @@ const LingerieHeroSection = () => {
     </div>
   )}
   <img 
-    src="https://res.cloudinary.com/djgcv06ka/image/upload/v1760613841/46_z1w04o.png"
+    src="https://res.cloudinary.com/djgcv06ka/image/upload/f_auto,q_auto:eco,w_800/v1760613841/46_z1w04o.png"
     alt="Lingerie Background"
     className={`w-full h-full object-cover md:object-cover sm:object-cover object-center transition-opacity duration-300 ${rightImageLoaded ? "opacity-100" : "opacity-0"}`}
     loading="lazy"

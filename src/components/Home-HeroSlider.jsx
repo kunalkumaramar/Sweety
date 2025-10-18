@@ -16,6 +16,15 @@ const HeroSlider = () => {
     isMobile ? state.mobileBanners || {} : state.banners || {}
   );
 
+  // Banner image optimization helper
+  const optimizeBanner = (url) => {
+    if (!url) return url;
+    return url.replace(
+      '/upload/',
+      '/upload/f_auto,q_auto:eco,w_1920,c_limit/'
+    );
+  };
+
   // Handle window resize to update isMobile
   useEffect(() => {
     const handleResize = () => {
@@ -135,7 +144,7 @@ const HeroSlider = () => {
                 </div>
               )}
               <img
-                src={banner.imageUrl}
+                src={optimizeBanner(banner.imageUrl)}
                 alt={banner.name}
                 className={`w-full h-full object-cover transition-opacity duration-300 ${
                   loadedImages[index] ? "opacity-100" : "opacity-0"
