@@ -578,6 +578,41 @@ const ProductDetail = () => {
   };
 
   return (
+    <>
+    
+            {isSizeChartOpen && currentProduct.sizeChart && (
+              <div className="fixed inset-0 bg-transparent bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+                <div
+                  ref={sizeChartModalRef}
+                  className="relative bg-white rounded-lg w-full h-full sm:max-w-[90vw] sm:max-h-[90vh] sm:m-4 flex items-center justify-center p-4"
+                >
+                  <button
+                    onClick={handleSizeChartToggle}
+                    className="absolute top-4 right-4 text-gray-600 hover:text-gray-800 z-10"
+                    aria-label="Close size chart"
+                  >
+                    <svg
+                      className="w-8 h-8"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                  <img
+                    src={currentProduct.sizeChart}
+                    alt="Size Chart"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+              </div>
+            )}
     <div className="min-h-screen bg-gray-50">
       <section
         ref={sectionRef}
@@ -872,40 +907,7 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Size Chart Modal */}
-            {isSizeChartOpen && currentProduct.sizeChart && (
-              <div className="fixed inset-0 bg-transparent bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
-                <div
-                  ref={sizeChartModalRef}
-                  className="relative bg-white rounded-lg w-full h-full sm:max-w-[90vw] sm:max-h-[90vh] sm:m-4 flex items-center justify-center p-4"
-                >
-                  <button
-                    onClick={handleSizeChartToggle}
-                    className="absolute top-4 right-4 text-gray-600 hover:text-gray-800 z-10"
-                    aria-label="Close size chart"
-                  >
-                    <svg
-                      className="w-8 h-8"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                  <img
-                    src={currentProduct.sizeChart}
-                    alt="Size Chart"
-                    className="max-w-full max-h-full object-contain"
-                  />
-                </div>
-              </div>
-            )}
+            
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
               <div className="flex items-center border-2 rounded w-fit bg-gray-200">
@@ -1059,6 +1061,9 @@ const ProductDetail = () => {
         </section>
       )}
     </div>
+    </>
+
+    
   );
 };
 
