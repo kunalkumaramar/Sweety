@@ -7,7 +7,7 @@ import Orders from "../components/Orders";
 
 const UserProfile = () => {
   const dispatch = useDispatch();
-  const { user, token, isAuthenticated } = useSelector((state) => state.auth);
+  const { isAuthenticated } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('profile'); // New state for tab management
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -123,7 +123,7 @@ const UserProfile = () => {
     setSuccess("");
     
     // Don't send email since it can't be updated
-    const { email, ...updateData } = formData;
+    const {...updateData } = formData;
     
     const response = await apiService.updateUserProfile(updateData);
     setProfileData(response.data);
@@ -167,7 +167,7 @@ const UserProfile = () => {
             <div className="flex gap-4">
               <button
                 onClick={handleLogout}
-                className="px-6 py-2 bg-pink-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                className="px-6 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-700 transition-colors"
               >
                 Logout
               </button>

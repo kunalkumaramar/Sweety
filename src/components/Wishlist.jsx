@@ -1,38 +1,42 @@
 //src/components/wishlist.jsx
 import { useWishlist } from "./WishlistContext";
 import { useCart } from "../hooks/useCart";
-import infoproducts from "./ProductsInfo";
 import { useNavigate } from "react-router-dom";
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 
 // ⭐ Reusable Wishlist Item Component
-const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderStars }) => {
+const WishlistItem = ({
+  item,
+  removeFromWishlist,
+  addToCart,
+  moveToCart,
+}) => {
   const itemRef = useRef(null);
   const navigate = useNavigate();
-  
+
   // Ensure we have a unique ID for the item
-  const itemId = item._id || item.id;
+  // const itemId = item._id || item.id;
 
   useEffect(() => {
     // GSAP hover animations
     const element = itemRef.current;
-    
+
     const handleMouseEnter = () => {
-      gsap.to(element, { 
-        scale: 1.02, 
+      gsap.to(element, {
+        scale: 1.02,
         boxShadow: "0 8px 25px rgba(0,0,0,0.1)",
-        duration: 0.3, 
-        ease: "power2.out" 
+        duration: 0.3,
+        ease: "power2.out",
       });
     };
 
     const handleMouseLeave = () => {
-      gsap.to(element, { 
-        scale: 1, 
+      gsap.to(element, {
+        scale: 1,
         boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-        duration: 0.3, 
-        ease: "power2.out" 
+        duration: 0.3,
+        ease: "power2.out",
       });
     };
 
@@ -46,14 +50,14 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
   }, []);
 
   const goToDetail = () => {
-  navigate(`/product/${item._id || item.id}`);
-};
+    navigate(`/product/${item._id || item.id}`);
+  };
 
   const handleAddToCart = async () => {
     const result = await addToCart(item);
     if (result && result.success) {
       // Show feedback animation
-      const button = itemRef.current?.querySelector('.add-to-cart-btn');
+      const button = itemRef.current?.querySelector(".add-to-cart-btn");
       if (button) {
         gsap.to(button, {
           scale: 0.95,
@@ -72,87 +76,88 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
       opacity: 0,
       duration: 0.3,
       ease: "power2.in",
-      onComplete: () => removeFromWishlist(item.id || item._id)
+      onComplete: () => removeFromWishlist(item.id || item._id),
     });
   };
 
   const handleMoveToCart = async () => {
-  try {  
-    // Extract the product data
-    const productData = item.product || item;  
-    // Get the actual product ID
-    const productId = item.id || productData.id || productData._id;
-    
-    if (!productId) {
-      console.error('No product ID found. Item structure:', item);
-      return;
+    try {
+      // Extract the product data
+      const productData = item.product || item;
+      // Get the actual product ID
+      const productId = item.id || productData.id || productData._id;
+
+      if (!productId) {
+        console.error("No product ID found. Item structure:", item);
+        return;
+      }
+
+      // Get first available color and its sizes
+      const defaultColor = productData.colors?.[0];
+
+      if (!defaultColor) {
+        console.error("No color information found", productData);
+        return;
+      }
+
+      // Get first available size from sizeStock
+      const defaultSize = defaultColor.sizeStock?.[0]?.size || "32";
+
+      // Get image from color images or fallback to main product image
+      const selectedImage = defaultColor.images?.[0] || productData.image;
+
+      // Create the complete color object with all required fields
+      const colorInfo = {
+        colorName: defaultColor.colorName || "Default",
+        colorHex: defaultColor.colorHex || "#000000",
+        images: defaultColor.images || [],
+        sizeStock: defaultColor.sizeStock || [],
+        _id: defaultColor._id,
+      };
+
+      // Validate required fields
+      if (!colorInfo.colorName || !colorInfo.colorHex || !selectedImage) {
+        console.error("Missing required fields:", {
+          color: colorInfo,
+          image: selectedImage,
+        });
+        return;
+      }
+
+      // Call moveToCart with the complete color object
+      const result = await moveToCart(
+        productId, // Use the correctly extracted product ID
+        1, // Default quantity
+        defaultSize,
+        colorInfo, // Pass the complete color object
+        selectedImage
+      );
+
+      if (result && result.success) {
+        // Animate removal since item was moved
+        gsap.to(itemRef.current, {
+          x: 100,
+          opacity: 0,
+          duration: 0.3,
+          ease: "power2.in",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to move item to cart:", error);
+      // You might want to show a notification here
     }
-
-    // Get first available color and its sizes
-    const defaultColor = productData.colors?.[0];
-
-    if (!defaultColor) {
-      console.error('No color information found', productData);
-      return;
-    }
-
-    // Get first available size from sizeStock
-    const defaultSize = defaultColor.sizeStock?.[0]?.size || '32';
-
-    // Get image from color images or fallback to main product image
-    const selectedImage = defaultColor.images?.[0] || productData.image;
-
-    // Create the complete color object with all required fields
-    const colorInfo = {
-      colorName: defaultColor.colorName || 'Default',
-      colorHex: defaultColor.colorHex || '#000000',
-      images: defaultColor.images || [],
-      sizeStock: defaultColor.sizeStock || [],
-      _id: defaultColor._id
-    };
-
-    // Validate required fields
-    if (!colorInfo.colorName || !colorInfo.colorHex || !selectedImage) {
-      console.error('Missing required fields:', {
-        color: colorInfo,
-        image: selectedImage
-      });
-      return;
-    }
-
-    // Call moveToCart with the complete color object
-    const result = await moveToCart(
-      productId, // Use the correctly extracted product ID
-      1, // Default quantity
-      defaultSize,
-      colorInfo, // Pass the complete color object
-      selectedImage
-    );
-
-    if (result && result.success) {
-      // Animate removal since item was moved
-      gsap.to(itemRef.current, {
-        x: 100,
-        opacity: 0,
-        duration: 0.3,
-        ease: 'power2.in',
-      });
-    }
-  } catch (error) {
-    console.error('Failed to move item to cart:', error);
-    // You might want to show a notification here
-  }
-};
+  };
 
   // Get price - use priceWhenAdded if available, fallback to current price
   const displayPrice = item.priceWhenAdded || item.price;
   const originalPrice = item.originalPrice;
 
   // Generate a unique key for the wishlist item
-  const itemKey = item.id || item._id || Math.random().toString(36).substr(2, 9);
+  const itemKey =
+    item.id || item._id || Math.random().toString(36).substr(2, 9);
 
   return (
-    <div 
+    <div
       key={itemKey}
       ref={itemRef}
       className="flex gap-4 py-4 px-4 bg-white rounded-lg shadow-sm border border-gray-100 mb-4 transition-all duration-300"
@@ -164,20 +169,20 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
         onClick={goToDetail}
         loading="lazy"
       />
-      
+
       {/* Mobile Layout - Single Column */}
       <div className="flex-1 lg:hidden">
-        <div 
+        <div
           className="text-base sm:text-lg font-semibold text-gray-800 mb-1 cursor-pointer hover:text-pink-600 transition-colors"
           onClick={goToDetail}
         >
           {item.brand || item.name}
         </div>
-        
+
         {/* Price Section for Mobile */}
         <div className="flex items-center gap-2 mb-3">
           <div className="text-lg font-semibold text-gray-800">
-            ₹{displayPrice ? displayPrice.toLocaleString() : 'N/A'}
+            ₹{displayPrice ? displayPrice.toLocaleString() : "N/A"}
           </div>
           {originalPrice && (
             <div className="text-sm text-gray-500 line-through">
@@ -186,7 +191,12 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
           )}
           {(item.discount || originalPrice) && displayPrice && (
             <div className="text-sm text-pink-600 font-semibold">
-              ({item.discount || Math.round(((originalPrice - displayPrice) / originalPrice) * 100)}% off)
+              (
+              {item.discount ||
+                Math.round(
+                  ((originalPrice - displayPrice) / originalPrice) * 100
+                )}
+              % off)
             </div>
           )}
         </div>
@@ -215,13 +225,13 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
           </button>
           {moveToCart && (
             <button
-              className="bg-green-600 text-white py-2 px-4 rounded-2xl text-sm font-medium hover:bg-green-700 transition-colors"
+              className="bg-pink-500 text-white py-2 px-4 rounded-2xl text-sm font-medium hover:bg-pink-700 transition-colors"
               onClick={handleMoveToCart}
             >
               Move to Cart
             </button>
           )}
-          <button 
+          <button
             className="text-pink-600 hover:underline text-sm"
             onClick={goToDetail}
           >
@@ -234,7 +244,7 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
       <div className="hidden lg:flex flex-1 gap-4">
         {/* Left Column - Product Info */}
         <div className="flex-1 pr-5">
-          <div 
+          <div
             className="text-base sm:text-lg font-semibold text-gray-800 mb-1 cursor-pointer hover:text-pink-600 transition-colors"
             onClick={goToDetail}
           >
@@ -243,7 +253,7 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
           {/* Price Section */}
           <div className="flex items-center gap-2 mb-3">
             <div className="text-lg font-semibold text-gray-800">
-              ₹{displayPrice ? displayPrice.toLocaleString() : 'N/A'}
+              ₹{displayPrice ? displayPrice.toLocaleString() : "N/A"}
             </div>
             {originalPrice && (
               <div className="text-sm text-gray-500 line-through">
@@ -252,7 +262,12 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
             )}
             {(item.discount || originalPrice) && displayPrice && (
               <div className="text-sm text-pink-600 font-semibold">
-                ({item.discount || Math.round(((originalPrice - displayPrice) / originalPrice) * 100)}% off)
+                (
+                {item.discount ||
+                  Math.round(
+                    ((originalPrice - displayPrice) / originalPrice) * 100
+                  )}
+                % off)
               </div>
             )}
           </div>
@@ -274,13 +289,13 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
             </button>
             {moveToCart && (
               <button
-                className="bg-green-600 text-white py-2 px-4 rounded-2xl text-sm font-medium hover:bg-green-700 transition-colors"
+                className="bg-pink-500 text-white py-2 px-4 rounded-2xl text-sm font-medium hover:bg-pink-700 transition-colors"
                 onClick={handleMoveToCart}
               >
                 Move to Cart
               </button>
             )}
-            <button 
+            <button
               className="text-pink-600 hover:underline text-sm"
               onClick={goToDetail}
             >
@@ -303,28 +318,28 @@ const WishlistItem = ({ item, removeFromWishlist, addToCart, moveToCart, renderS
 };
 
 // ⭐ Reusable Recommendation Item Component
-const RecommendationItem = ({ item, addToCart, addToWishlist, renderStars }) => {
+const RecommendationItem = ({ item, addToWishlist }) => {
   const itemRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const element = itemRef.current;
-    
+
     const handleMouseEnter = () => {
-      gsap.to(element, { 
+      gsap.to(element, {
         y: -5,
         boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-        duration: 0.3, 
-        ease: "power2.out" 
+        duration: 0.3,
+        ease: "power2.out",
       });
     };
 
     const handleMouseLeave = () => {
-      gsap.to(element, { 
+      gsap.to(element, {
         y: 0,
         boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-        duration: 0.3, 
-        ease: "power2.out" 
+        duration: 0.3,
+        ease: "power2.out",
       });
     };
 
@@ -338,21 +353,26 @@ const RecommendationItem = ({ item, addToCart, addToWishlist, renderStars }) => 
   }, []);
 
   const goToDetail = () => {
-  navigate(`/product/${item._id || item.id}`);
-};
+    navigate(`/product/${item._id || item.id}`);
+  };
 
   return (
-    <div 
+    <div
       ref={itemRef}
       className="flex gap-3 py-3 border-b border-gray-200 last:border-b-0 transition-all duration-300"
     >
       <img
-  src={item.colors?.[0]?.images?.[0] || item.images?.[0] || item.image || '/placeholder.png'}
-  alt={item.description || item.name}
-  className="w-16 h-16 sm:w-20 sm:h-20 rounded-md object-cover flex-shrink-0 cursor-pointer"
-  onClick={goToDetail}
-  loading="lazy"
-/>
+        src={
+          item.colors?.[0]?.images?.[0] ||
+          item.images?.[0] ||
+          item.image ||
+          "/placeholder.png"
+        }
+        alt={item.description || item.name}
+        className="w-16 h-16 sm:w-20 sm:h-20 rounded-md object-cover flex-shrink-0 cursor-pointer"
+        onClick={goToDetail}
+        loading="lazy"
+      />
       <div className="flex-1">
         <div
           onClick={goToDetail}
@@ -363,7 +383,12 @@ const RecommendationItem = ({ item, addToCart, addToWishlist, renderStars }) => 
         <div className="flex items-center gap-2 mb-2">
           {(item.discount || item.originalPrice) && (
             <span className="text-pink-600 text-xs font-semibold">
-              -{item.discount || Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}%
+              -
+              {item.discount ||
+                Math.round(
+                  ((item.originalPrice - item.price) / item.originalPrice) * 100
+                )}
+              %
             </span>
           )}
           <span className="text-sm font-semibold text-gray-800">
@@ -384,129 +409,132 @@ const RecommendationItem = ({ item, addToCart, addToWishlist, renderStars }) => 
 };
 
 const Wishlist = () => {
-  const { 
-    wishlistItems, 
-    removeFromWishlist, 
+  const {
+    wishlistItems,
+    removeFromWishlist,
     addToWishlist,
     moveToCart,
     moveAllToCart,
     clearWishlist,
     loading,
-    isWishlistEmpty,
     count,
-    isAuthenticated
+    isAuthenticated,
   } = useWishlist();
-  
+
   const { addItemToCart } = useCart();
   const containerRef = useRef(null);
-  
+
   // Recommendations based on wishlist or popular products
   const [recommendations, setRecommendations] = useState([]);
   const [rawRecommendations, setRawRecommendations] = useState([]);
-const [loadingRecommendations, setLoadingRecommendations] = useState(true);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(true);
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
-useEffect(() => {
-  const fetchRecommendations = async () => {
-    try {
-      setLoadingRecommendations(true);
-      
-      // Fetch categories
-      const categoriesRes = await fetch(`${API_BASE_URL}/category`);
-      const categoriesData = await categoriesRes.json();
-      const categories = categoriesData.data || [];
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        setLoadingRecommendations(true);
 
-      const products = [];
+        // Fetch categories
+        const categoriesRes = await fetch(`${API_BASE_URL}/category`);
+        const categoriesData = await categoriesRes.json();
+        const categories = categoriesData.data || [];
 
-      for (const category of categories) {
-        // Fetch subcategories
-        const subcategoriesRes = await fetch(`${API_BASE_URL}/sub-category/category/${category._id}`);
-        const subcategoriesData = await subcategoriesRes.json();
-        const subcategories = subcategoriesData.data || [];
+        const products = [];
 
-        if (subcategories.length > 0) {
-          // If subcategories exist, fetch one product from each
-          for (const subcategory of subcategories) {
+        for (const category of categories) {
+          // Fetch subcategories
+          const subcategoriesRes = await fetch(
+            `${API_BASE_URL}/sub-category/category/${category._id}`
+          );
+          const subcategoriesData = await subcategoriesRes.json();
+          const subcategories = subcategoriesData.data || [];
+
+          if (subcategories.length > 0) {
+            // If subcategories exist, fetch one product from each
+            for (const subcategory of subcategories) {
+              const productsRes = await fetch(
+                `${API_BASE_URL}/product/subcategory/${subcategory._id}?page=1&limit=2&isActive=true`
+              );
+              const productsData = await productsRes.json();
+              const latestProducts = productsData.data?.products || [];
+
+              latestProducts.forEach((latestProduct) => {
+                if (latestProduct) {
+                  products.push({
+                    ...latestProduct,
+                    categoryName: category.name,
+                    subcategoryName: subcategory.name,
+                  });
+                }
+              });
+            }
+          } else {
+            // If no subcategories, fetch directly from category
             const productsRes = await fetch(
-              `${API_BASE_URL}/product/subcategory/${subcategory._id}?page=1&limit=2&isActive=true`
+              `${API_BASE_URL}/product/category/${category._id}?page=1&limit=2&isActive=true`
             );
             const productsData = await productsRes.json();
             const latestProducts = productsData.data?.products || [];
-            
-            latestProducts.forEach(latestProduct => {
+
+            latestProducts.forEach((latestProduct) => {
               if (latestProduct) {
                 products.push({
                   ...latestProduct,
                   categoryName: category.name,
-                  subcategoryName: subcategory.name
+                  subcategoryName: null,
                 });
               }
             });
           }
-        } else {
-          // If no subcategories, fetch directly from category
-          const productsRes = await fetch(
-            `${API_BASE_URL}/product/category/${category._id}?page=1&limit=2&isActive=true`
-          );
-          const productsData = await productsRes.json();
-          const latestProducts = productsData.data?.products || [];
-          
-          latestProducts.forEach(latestProduct => {
-            if (latestProduct) {
-              products.push({
-                ...latestProduct,
-                categoryName: category.name,
-                subcategoryName: null
-              });
-            }
-          });
         }
+
+        setRawRecommendations(products);
+      } catch (err) {
+        console.error("Error fetching recommendations:", err);
+        setRawRecommendations([]);
+      } finally {
+        setLoadingRecommendations(false);
       }
+    };
 
-      setRawRecommendations(products);
-    } catch (err) {
-      console.error('Error fetching recommendations:', err);
-      setRawRecommendations([]);
-    } finally {
+    const cacheKey = "wishlist_raw_recs";
+    const cached = localStorage.getItem(cacheKey);
+    const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+    const now = Date.now();
+    const cacheExpiry = 3600000; // 1 hour
+
+    if (cached && cacheTime && now - parseInt(cacheTime) < cacheExpiry) {
+      setRawRecommendations(JSON.parse(cached));
       setLoadingRecommendations(false);
+    } else {
+      fetchRecommendations();
+      // Cache will be set in the filter effect after fetch
     }
-  };
+  }, [API_BASE_URL]);
 
-  const cacheKey = 'wishlist_raw_recs';
-  const cached = localStorage.getItem(cacheKey);
-  const cacheTime = localStorage.getItem(`${cacheKey}_time`);
-  const now = Date.now();
-  const cacheExpiry = 3600000; // 1 hour
+  useEffect(() => {
+    if (rawRecommendations.length === 0) {
+      setRecommendations([]);
+      return;
+    }
 
-  if (cached && cacheTime && (now - parseInt(cacheTime)) < cacheExpiry) {
-    setRawRecommendations(JSON.parse(cached));
-    setLoadingRecommendations(false);
-  } else {
-    fetchRecommendations();
-    // Cache will be set in the filter effect after fetch
-  }
-}, [API_BASE_URL]);
+    const cacheKey = "wishlist_raw_recs";
+    const filteredProducts = rawRecommendations
+      .filter(
+        (product) =>
+          !wishlistItems.find((item) => (item.id || item._id) === product._id)
+      )
+      .slice(0, 6);
 
+    setRecommendations(filteredProducts);
 
-useEffect(() => {
-  if (rawRecommendations.length === 0) {
-    setRecommendations([]);
-    return;
-  }
-
-  const cacheKey = 'wishlist_raw_recs';
-  const filteredProducts = rawRecommendations
-    .filter(product => !wishlistItems.find(item => (item.id || item._id) === product._id))
-    .slice(0, 6);
-
-  setRecommendations(filteredProducts);
-
-  // Cache the raw data
-  localStorage.setItem(cacheKey, JSON.stringify(rawRecommendations));
-  localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
-}, [rawRecommendations, wishlistItems]);
-
+    // Cache the raw data
+    localStorage.setItem(cacheKey, JSON.stringify(rawRecommendations));
+    localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+  }, [rawRecommendations, wishlistItems]);
 
   const renderStars = (rating) => "★".repeat(rating);
   const getTotalItems = () => count || wishlistItems.length;
@@ -514,7 +542,8 @@ useEffect(() => {
   useEffect(() => {
     // Initial animation for the entire container
     if (containerRef.current) {
-      gsap.fromTo(containerRef.current,
+      gsap.fromTo(
+        containerRef.current,
         { opacity: 0, y: 20 },
         { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }
       );
@@ -524,14 +553,17 @@ useEffect(() => {
   // Handle add all to cart
   const handleAddAllToCart = async () => {
     if (wishlistItems.length === 0) return;
-    
+
     // Use moveAllToCart which handles API calls and removes items from wishlist
     await moveAllToCart();
   };
 
   // Handle clear wishlist
   const handleClearWishlist = async () => {
-    if (wishlistItems.length > 0 && confirm('Are you sure you want to clear your entire wishlist?')) {
+    if (
+      wishlistItems.length > 0 &&
+      confirm("Are you sure you want to clear your entire wishlist?")
+    ) {
       await clearWishlist();
     }
   };
@@ -564,7 +596,7 @@ useEffect(() => {
             className="bg-pink-600 text-white py-3 px-6 rounded-2xl font-medium hover:bg-pink-700 transition-colors"
             onClick={() => {
               // You can trigger your login modal here or redirect to login page
-              console.log('Trigger login modal');
+              console.log("Trigger login modal");
             }}
           >
             Sign In
@@ -578,7 +610,7 @@ useEffect(() => {
     <div className="bg-gray-100 min-h-screen">
       {/* Mobile Layout */}
       <div className="lg:hidden">
-        <div 
+        <div
           ref={containerRef}
           className="p-3 pb-24" // Add bottom padding for footer
         >
@@ -588,14 +620,14 @@ useEffect(() => {
               Quick Actions
             </div>
             <div className="flex flex-col gap-3">
-              <button 
+              <button
                 className="w-full bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleAddAllToCart}
                 disabled={wishlistItems.length === 0}
               >
                 Move All to Cart
               </button>
-              <button 
+              <button
                 className="w-full border border-pink-600 text-pink-600 py-3 rounded-3xl text-sm font-semibold hover:bg-pink-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleClearWishlist}
                 disabled={wishlistItems.length === 0}
@@ -616,7 +648,7 @@ useEffect(() => {
                 </span>
               </div>
             </div>
-            
+
             <div className="p-2">
               {wishlistItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center text-center py-10">
@@ -629,7 +661,7 @@ useEffect(() => {
                   </p>
                   <button
                     className="bg-pink-600 text-white py-3 px-6 rounded-2xl font-medium hover:bg-pink-700 transition-colors text-sm"
-                    onClick={() => window.location.href = '/'}
+                    onClick={() => (window.location.href = "/")}
                   >
                     Start Shopping
                   </button>
@@ -655,33 +687,33 @@ useEffect(() => {
               You Might Also Like
             </div>
             <div className="px-4 pb-4">
-  {loadingRecommendations ? (
-    <div className="flex justify-center items-center py-10">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
-    </div>
-  ) : recommendations.length > 0 ? (
-    recommendations.map((item) => (
-      <RecommendationItem
-        key={item._id || item.id}
-        item={item}
-        addToCart={addItemToCart}
-        addToWishlist={addToWishlist}
-        renderStars={renderStars}
-      />
-    ))
-  ) : (
-    <div className="text-center py-10 text-gray-500 text-sm">
-      No recommendations available
-    </div>
-  )}
-</div>
+              {loadingRecommendations ? (
+                <div className="flex justify-center items-center py-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+                </div>
+              ) : recommendations.length > 0 ? (
+                recommendations.map((item) => (
+                  <RecommendationItem
+                    key={item._id || item.id}
+                    item={item}
+                    addToCart={addItemToCart}
+                    addToWishlist={addToWishlist}
+                    renderStars={renderStars}
+                  />
+                ))
+              ) : (
+                <div className="text-center py-10 text-gray-500 text-sm">
+                  No recommendations available
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Desktop Layout */}
       <div className="hidden lg:block p-5">
-        <div 
+        <div
           ref={containerRef}
           className="max-w-7xl mx-auto flex flex-row gap-5 h-[calc(100vh-40px)]"
         >
@@ -696,7 +728,7 @@ useEffect(() => {
                 </span>
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto px-5 py-2 hide-scrollbar">
               {wishlistItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-20">
@@ -709,7 +741,7 @@ useEffect(() => {
                   </p>
                   <button
                     className="bg-pink-600 text-white py-3 px-6 rounded-2xl font-medium hover:bg-pink-700 transition-colors"
-                    onClick={() => window.location.href = '/'}
+                    onClick={() => (window.location.href = "/")}
                   >
                     Start Shopping
                   </button>
@@ -737,14 +769,14 @@ useEffect(() => {
                 Quick Actions
               </div>
               <div className="flex flex-col gap-3">
-                <button 
+                <button
                   className="w-full bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleAddAllToCart}
                   disabled={wishlistItems.length === 0}
                 >
                   Move All to Cart
                 </button>
-                <button 
+                <button
                   className="w-full border border-pink-600 text-pink-600 py-3 rounded-3xl text-sm font-semibold hover:bg-pink-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleClearWishlist}
                   disabled={wishlistItems.length === 0}
@@ -753,33 +785,33 @@ useEffect(() => {
                 </button>
               </div>
             </div>
-            
+
             {/* Recommendations */}
             <div className="bg-white rounded-xl shadow-lg flex flex-col flex-1 min-h-0">
               <div className="text-lg font-semibold text-gray-800 p-5 pb-3 text-center border-b border-gray-200">
                 You Might Also Like
               </div>
               <div className="flex-1 overflow-y-auto px-5 pb-5 hide-scrollbar">
-  {loadingRecommendations ? (
-    <div className="flex justify-center items-center py-10">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
-    </div>
-  ) : recommendations.length > 0 ? (
-    recommendations.map((item) => (
-      <RecommendationItem
-        key={item._id || item.id}
-        item={item}
-        addToCart={addItemToCart}
-        addToWishlist={addToWishlist}
-        renderStars={renderStars}
-      />
-    ))
-  ) : (
-    <div className="text-center py-10 text-gray-500">
-      No recommendations available
-    </div>
-  )}
-</div>
+                {loadingRecommendations ? (
+                  <div className="flex justify-center items-center py-10">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+                  </div>
+                ) : recommendations.length > 0 ? (
+                  recommendations.map((item) => (
+                    <RecommendationItem
+                      key={item._id || item.id}
+                      item={item}
+                      addToCart={addItemToCart}
+                      addToWishlist={addToWishlist}
+                      renderStars={renderStars}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-10 text-gray-500">
+                    No recommendations available
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -800,9 +832,9 @@ const styles = `
   }
 `;
 
-if (!document.querySelector('#wishlist-styles')) {
-  const styleElement = document.createElement('style');
-  styleElement.id = 'wishlist-styles';
+if (!document.querySelector("#wishlist-styles")) {
+  const styleElement = document.createElement("style");
+  styleElement.id = "wishlist-styles";
   styleElement.textContent = styles;
   document.head.appendChild(styleElement);
 }
