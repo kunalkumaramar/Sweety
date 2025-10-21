@@ -584,7 +584,7 @@ const ProductDetail = () => {
               <div className="fixed inset-0 bg-transparent bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
                 <div
                   ref={sizeChartModalRef}
-                  className="relative bg-white rounded-lg w-full h-full sm:max-w-[90vw] sm:max-h-[90vh] sm:m-4 flex items-center justify-center p-4"
+                  className="relative bg-[#f9e2e7] rounded-lg w-full h-full sm:max-w-[90vw] sm:max-h-[90vh] sm:m-4 flex items-center justify-center p-4"
                 >
                   <button
                     onClick={handleSizeChartToggle}
