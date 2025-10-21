@@ -167,7 +167,7 @@ const UserProfile = () => {
             <div className="flex gap-4">
               <button
                 onClick={handleLogout}
-                className="px-6 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                className="px-6 py-2 bg-pink-500 text-white rounded-md hover:bg-red-600 transition-colors"
               >
                 Logout
               </button>
