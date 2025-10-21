@@ -368,7 +368,7 @@ const FeaturedProducts = () => {
         rect.bottom >= window.innerHeight / 2;
       if (!isInCardsArea) return;
 
-      e.preventDefault();
+      //e.preventDefault();
       scrollAccumulator.current += e.deltaY;
 
       const threshold = 100;
