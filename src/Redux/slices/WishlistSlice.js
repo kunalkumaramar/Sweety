@@ -1,4 +1,4 @@
-// src/Redux/slices/wishlistSlice.js - Updated for new API structure
+// src/Redux/slices/wishlistSlice.js - Updated with size/color/image storage
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { apiService } from '../../services/api';
 
@@ -29,7 +29,7 @@ export const getWishlist = createAsyncThunk(
 
 export const addToWishlist = createAsyncThunk(
   'wishlist/addToWishlist',
-  async ({ productId, priceWhenAdded }, { rejectWithValue }) => {
+  async ({ productId, priceWhenAdded, selectedSize = null, selectedColorName = null, selectedColorHex = null, selectedImage = null }, { rejectWithValue }) => {
     try {
       const response = await apiService.addToWishlist(productId, priceWhenAdded);
       return response.data;
@@ -53,10 +53,17 @@ export const checkWishlistItem = createAsyncThunk(
 
 export const toggleWishlistItem = createAsyncThunk(
   'wishlist/toggleWishlistItem',
-  async ({ productId, priceWhenAdded }, { rejectWithValue }) => {
+  async ({ productId, priceWhenAdded, selectedSize = null, selectedColorName = null, selectedColorHex = null, selectedImage = null }, { rejectWithValue }) => {
     try {
       const response = await apiService.toggleWishlistItem(productId, priceWhenAdded);
-      return { productId, ...response.data };
+      return { 
+        productId, 
+        ...response.data,
+        selectedSize,
+        selectedColorName,
+        selectedColorHex,
+        selectedImage
+      };
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -91,17 +98,16 @@ export const moveWishlistItemToCart = createAsyncThunk(
   'wishlist/moveWishlistItemToCart',
   async ({ productId, quantity = 1, size = 'M', colorName = '', colorHex = '#000000', selectedImage = '' }, { dispatch, rejectWithValue }) => {
     try {
-      // First try to add to cart
-      const cartResponse = await apiService.addToCart(
+      // FIXED: Use cart's addToCartAsync thunk to trigger cart popup/notification
+      const cartResponse = await dispatch(addToCartAsync({
         productId,
         quantity,
-        size,
-        { colorName, colorHex },
+        size: size.toLowerCase(),
+        color: { colorName, colorHex },
         selectedImage
-      );
+      })).unwrap();
 
       if (cartResponse.success) {
-        // If successfully added to cart, remove from wishlist
         await dispatch(removeFromWishlist(productId));
         return { productId, success: true };
       }
@@ -132,7 +138,6 @@ const initialState = {
   error: null,
   total: 0,
   count: 0,
-  // Individual loading states
   creating: false,
   adding: false,
   removing: false,
@@ -140,8 +145,7 @@ const initialState = {
   checking: false,
   moving: false,
   clearing: false,
-  // Check cache for items
-  itemChecks: {} // { productId: boolean }
+  itemChecks: {}
 };
 
 const wishlistSlice = createSlice({
@@ -159,19 +163,22 @@ const wishlistSlice = createSlice({
     clearWishlistError: (state) => {
       state.error = null;
     },
-    // Optimistic updates
     addToWishlistLocal: (state, action) => {
-      const { product, priceWhenAdded } = action.payload;
+      const { product, priceWhenAdded, selectedSize = null, selectedColorName = null, selectedColorHex = null, selectedImage = null } = action.payload;
       const productId = product._id || product.id;
       const existingItem = state.items.find(item => 
-        item.product === productId || item.product._id === productId
+        (typeof item.product === 'string' ? item.product : item.product?._id || item.product?.id) === productId
       );
       
       if (!existingItem) {
         state.items.push({
-          product: productId,
+          product: product, // Store full product object for enrichment
           priceWhenAdded: priceWhenAdded || product.price,
           addedAt: new Date().toISOString(),
+          selectedSize,
+          selectedColorName,
+          selectedColorHex,
+          selectedImage,
           _id: 'temp_' + Date.now()
         });
         state.total = state.items.length;
@@ -182,15 +189,31 @@ const wishlistSlice = createSlice({
     removeFromWishlistLocal: (state, action) => {
       const productId = action.payload;
       state.items = state.items.filter(item => 
-        item.product !== productId && item.product._id !== productId
+        (typeof item.product === 'string' ? item.product : item.product?._id || item.product?.id) !== productId
       );
       state.total = state.items.length;
       state.count = state.items.length;
-      state.itemChecks[productId] = false;
+      delete state.itemChecks[productId]; // Use delete for safety
     },
     updateItemCheck: (state, action) => {
       const { productId, exists } = action.payload;
       state.itemChecks[productId] = exists;
+    },
+    // NEW: Clean invalid items (e.g., missing product ID)
+    cleanInvalidItems: (state) => {
+      state.items = state.items.filter(item => {
+        const productId = typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id);
+        return productId && productId !== 'undefined' && productId !== null && productId !== '';
+      });
+      state.total = state.items.length;
+      state.count = state.items.length;
+      // Rebuild checks for valid items
+      state.itemChecks = {};
+      state.items.forEach(item => {
+        const productId = typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id);
+        state.itemChecks[productId] = true;
+      });
+      state.error = null;
     }
   },
   extraReducers: (builder) => {
@@ -224,17 +247,15 @@ const wishlistSlice = createSlice({
         state.total = state.items.length;
         state.count = state.items.length;
         
-        // Update item checks based on current items
         state.itemChecks = {};
         state.items.forEach(item => {
-          const productId = item.product._id || item.product;
-          state.itemChecks[productId] = true;
+          const productId = typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id);
+          if (productId) state.itemChecks[productId] = true;
         });
       })
       .addCase(getWishlist.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        // Reset to empty state if wishlist doesn't exist
         if (action.payload && action.payload.includes('not found')) {
           state.wishlist = null;
           state.items = [];
@@ -251,15 +272,44 @@ const wishlistSlice = createSlice({
       })
       .addCase(addToWishlist.fulfilled, (state, action) => {
         state.adding = false;
+        state.error = null;
+        
+        // Extract from thunk arg
+        const { productId, selectedSize, selectedColorName, selectedColorHex, selectedImage } = action.meta.arg;
+        
+        // Optional debug log (remove in production)
+        console.log('Merging selections into wishlist item:', { productId, selectedSize, selectedColorName });
+        
+        let items = action.payload.items || [];
+        
+        // Find added item (robust handling for product as string or object)
+        const addedIndex = items.findIndex(item => {
+          const itemId = typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id);
+          return itemId === productId;
+        });
+        
+        if (addedIndex !== -1 && (selectedSize || selectedColorName || selectedColorHex || selectedImage)) {
+          items[addedIndex] = {
+            ...items[addedIndex],
+            selectedSize: selectedSize || items[addedIndex].selectedSize,
+            selectedColorName: selectedColorName || items[addedIndex].selectedColorName,
+            selectedColorHex: selectedColorHex || items[addedIndex].selectedColorHex,
+            selectedImage: selectedImage || items[addedIndex].selectedImage
+          };
+          // Optional debug log
+          console.log('Merged item selectedSize:', items[addedIndex].selectedSize);
+        }
+        
         state.wishlist = action.payload;
-        state.items = action.payload.items || [];
+        state.items = items;
         state.total = state.items.length;
         state.count = state.items.length;
         
-        // Update item checks
+        // Rebuild checks
+        state.itemChecks = {};
         state.items.forEach(item => {
-          const productId = item.product._id || item.product;
-          state.itemChecks[productId] = true;
+          const itemId = typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id);
+          if (itemId) state.itemChecks[itemId] = true;
         });
       })
       .addCase(addToWishlist.rejected, (state, action) => {
@@ -288,12 +338,45 @@ const wishlistSlice = createSlice({
       })
       .addCase(toggleWishlistItem.fulfilled, (state, action) => {
         state.toggling = false;
-        const { productId, action: apiAction } = action.payload;
+        state.error = null;
+        
+        const { productId, action: apiAction, selectedSize, selectedColorName, selectedColorHex, selectedImage } = action.payload;
+        
+        let items = action.payload.items || state.items;
         
         if (apiAction === 'added') {
+          // Merge selections
+          const addedIndex = items.findIndex(item => {
+            const itemId = typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id);
+            return itemId === productId;
+          });
+          
+          if (addedIndex !== -1 && (selectedSize || selectedColorName || selectedColorHex || selectedImage)) {
+            items[addedIndex] = {
+              ...items[addedIndex],
+              selectedSize: selectedSize || items[addedIndex].selectedSize,
+              selectedColorName: selectedColorName || items[addedIndex].selectedColorName,
+              selectedColorHex: selectedColorHex || items[addedIndex].selectedColorHex,
+              selectedImage: selectedImage || items[addedIndex].selectedImage
+            };
+          }
           state.itemChecks[productId] = true;
         } else if (apiAction === 'removed') {
-          state.itemChecks[productId] = false;
+          items = items.filter(item => {
+            const itemId = typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id);
+            return itemId !== productId;
+          });
+          delete state.itemChecks[productId];
+          state.total = items.length;
+          state.count = items.length;
+        }
+        
+        state.wishlist = action.payload.wishlist || state.wishlist;
+        state.items = items;
+        
+        // Rebuild checks if needed
+        if (apiAction === 'added') {
+          state.itemChecks[productId] = true;
         }
       })
       .addCase(toggleWishlistItem.rejected, (state, action) => {
@@ -308,16 +391,16 @@ const wishlistSlice = createSlice({
       })
       .addCase(removeFromWishlist.fulfilled, (state, action) => {
         state.removing = false;
-        const { productId, data } = action.payload;
+        const { productId } = action.payload;
         
-        if (data) {
-          state.wishlist = data;
-          state.items = data.items || [];
-          state.total = state.items.length;
-          state.count = state.items.length;
-        }
-        
-        state.itemChecks[productId] = false;
+        // Remove the item from local state immediately
+        state.items = state.items.filter(item => {
+          const itemProductId = typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id);
+          return itemProductId !== productId;
+        });
+        state.total = state.items.length;
+        state.count = state.items.length;
+        delete state.itemChecks[productId];
       })
       .addCase(removeFromWishlist.rejected, (state, action) => {
         state.removing = false;
@@ -325,8 +408,14 @@ const wishlistSlice = createSlice({
       })
       
       // Get Wishlist Count
+      .addCase(getWishlistCount.pending, (state) => {
+        // Optional: add pending state if needed
+      })
       .addCase(getWishlistCount.fulfilled, (state, action) => {
         state.count = action.payload;
+      })
+      .addCase(getWishlistCount.rejected, (state, action) => {
+        state.error = action.payload;
       })
       
       // Move to Cart
@@ -336,16 +425,16 @@ const wishlistSlice = createSlice({
       })
       .addCase(moveWishlistItemToCart.fulfilled, (state, action) => {
         state.moving = false;
-        const { productId, wishlist } = action.payload;
+        const { productId } = action.payload;
         
-        if (wishlist) {
-          state.wishlist = wishlist;
-          state.items = wishlist.items || [];
-          state.total = state.items.length;
-          state.count = state.items.length;
-        }
-        
-        state.itemChecks[productId] = false;
+        // Remove from wishlist immediately
+        state.items = state.items.filter(item => {
+          const itemProductId = typeof item.product === 'string' ? item.product : (item.product?._id || item.product?.id);
+          return itemProductId !== productId;
+        });
+        state.total = state.items.length;
+        state.count = state.items.length;
+        delete state.itemChecks[productId];
       })
       .addCase(moveWishlistItemToCart.rejected, (state, action) => {
         state.moving = false;
@@ -377,7 +466,8 @@ export const {
   clearWishlistError,
   addToWishlistLocal,
   removeFromWishlistLocal,
-  updateItemCheck
+  updateItemCheck,
+  cleanInvalidItems // NEW: Export the cleanup action
 } = wishlistSlice.actions;
 
 export default wishlistSlice.reducer;

@@ -1,6 +1,6 @@
 // src/hooks/useWishlist.js
 import { useSelector, useDispatch } from 'react-redux';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { apiService } from '../services/api';
 import {
   createWishlist,
@@ -15,13 +15,15 @@ import {
   clearWishlistError,
   addToWishlistLocal,
   removeFromWishlistLocal,
-  updateItemCheck
+  updateItemCheck,
+  cleanInvalidItems // NEW: Import the cleanup action
 } from '../Redux/slices/WishlistSlice';
 
 export const useWishlist = () => {
   const dispatch = useDispatch();
   const [enrichedItems, setEnrichedItems] = useState([]);
   const [enriching, setEnriching] = useState(false);
+  const cleanedRef = useRef(false); // NEW: Ref to prevent repeated clean calls
 
   const {
     wishlist,
@@ -49,6 +51,14 @@ export const useWishlist = () => {
     }
   }, [dispatch]);
 
+  // NEW: Clean invalid items after loading wishlist (run once on mount or after getWishlist)
+  useEffect(() => {
+    if (items && items.length > 0 && !cleanedRef.current) {
+      dispatch(cleanInvalidItems());
+      cleanedRef.current = true;
+    }
+  }, [dispatch, items]);
+
   // Enrich wishlist items with product details (cached in enrichedItems)
   useEffect(() => {
     const enrichItems = async () => {
@@ -57,43 +67,71 @@ export const useWishlist = () => {
         return;
       }
 
+      // FIXED: Filter out invalid items before processing (prevents /product/undefined calls)
+      const validItems = items.filter(item => {
+        const productId = typeof item.product === 'object' ? (item.product?._id || item.product?.id) : item.product;
+        if (!productId || productId === 'undefined' || productId === null || productId === '') {
+          console.warn('Skipping invalid wishlist item (missing/invalid product ID):', item);
+          return false;
+        }
+        return true;
+      });
+
+      if (validItems.length === 0) {
+        console.log('No valid items to enrich');
+        setEnrichedItems([]);
+        return;
+      }
+
+      console.log(`Enriching ${validItems.length} valid items...`); // Debug log
+
       setEnriching(true);
       try {
-        const enrichedPromises = items.map(async (item) => {
-          const productId = typeof item.product === 'object' ? item.product._id : item.product;
+        const enrichedPromises = validItems.map(async (item) => {
+          const productId = typeof item.product === 'object' ? (item.product._id || item.product.id) : item.product;
 
-          // If product object already present
-          if (typeof item.product === 'object' && item.product._id) {
+          // If product object already present (e.g., from local optimistic add)
+          if (typeof item.product === 'object' && (item.product._id || item.product.id)) {
             const productObj = item.product;
             return {
               _id: item._id,
               id: productId,
               addedAt: item.addedAt,
               priceWhenAdded: item.priceWhenAdded,
-              // full product details (preserve shape)
+              // full product details (preserve shape, including selections if merged)
               ...productObj,
-              image: productObj.colors?.[0]?.images?.[0] || productObj.images?.[0] || '',
+              // FIXED: Explicitly preserve selections from item (in case not merged into productObj)
+              selectedSize: item.selectedSize,
+              selectedColorName: item.selectedColorName,
+              selectedColorHex: item.selectedColorHex,
+              selectedImage: item.selectedImage,
+              image: productObj.colors?.[0]?.images?.[0] || productObj.images?.[0] || productObj.image || '',
               images: productObj.colors?.[0]?.images || productObj.images || [],
               colors: productObj.colors || []
             };
           }
 
-          // otherwise fetch product details from API
+          // Otherwise fetch product details from API
           try {
             const response = await apiService.getProductById(productId);
             const product = response.data;
+            // FIXED: Merge any existing selections from item (e.g., selectedSize from Redux merge)
             return {
               _id: item._id,
               id: productId,
               addedAt: item.addedAt,
               priceWhenAdded: item.priceWhenAdded,
+              selectedSize: item.selectedSize, // Preserve from state
+              selectedColorName: item.selectedColorName,
+              selectedColorHex: item.selectedColorHex,
+              selectedImage: item.selectedImage,
               name: product.name,
-              brand: product.name,
+              brand: product.name, // Or product.brand if separate
               description: product.description,
               price: product.price,
               originalPrice: product.originalPrice,
               rating: product.rating || 5,
-              image: product.colors?.[0]?.images?.[0] || product.images?.[0] || '',
+              image: product.colors?.[0]?.images?.[0] || product.images?.[0] || product.image || '',
               images: product.colors?.[0]?.images || product.images || [],
               colors: product.colors || [],
               category: product.category,
@@ -101,15 +139,20 @@ export const useWishlist = () => {
             };
           } catch (fetchError) {
             console.error(`Failed to fetch product ${productId}:`, fetchError);
-            // Minimal fallback so UI still shows item
+            // FIXED: Enhanced fallback with preserved selections
             return {
               _id: item._id,
               id: productId,
               addedAt: item.addedAt,
               priceWhenAdded: item.priceWhenAdded,
-              name: 'Product',
-              price: item.priceWhenAdded,
-              image: '',
+              selectedSize: item.selectedSize,
+              selectedColorName: item.selectedColorName,
+              selectedColorHex: item.selectedColorHex,
+              selectedImage: item.selectedImage,
+              name: 'Product Unavailable',
+              brand: 'N/A',
+              price: item.priceWhenAdded || 0,
+              image: item.selectedImage || '',
               images: [],
               colors: []
             };
@@ -120,6 +163,13 @@ export const useWishlist = () => {
         setEnrichedItems(enriched);
       } catch (err) {
         console.error('Failed to enrich wishlist items:', err);
+        // FIXED: Fallback to validItems without enrichment if whole process fails
+        setEnrichedItems(validItems.map(item => ({
+          ...item,
+          name: 'Product Unavailable',
+          price: item.priceWhenAdded || 0,
+          image: ''
+        })));
       } finally {
         setEnriching(false);
       }
@@ -128,7 +178,7 @@ export const useWishlist = () => {
     enrichItems();
   }, [items]);
 
-  // CREATE / ADD / REMOVE / TOGGLE (unchanged)
+  // CREATE / ADD / REMOVE / TOGGLE
   const createUserWishlist = useCallback(async (name = "My Wishlist", isPublic = false) => {
     try {
       await dispatch(createWishlist({ name, isPublic })).unwrap();
@@ -139,15 +189,63 @@ export const useWishlist = () => {
     }
   }, [dispatch]);
 
-  const addItemToWishlist = useCallback(async (product) => {
+  const addItemToWishlist = useCallback(async (payloadOrProduct) => {
     if (!isAuthenticated()) return { success: false, error: 'Authentication required' };
 
-    const productId = product.id || product._id;
-    const priceWhenAdded = product.price;
+    // FIXED: Handle both full product object and structured payload {productId, ...}
+    let productId, priceWhenAdded, selectedSize, selectedColorName, selectedColorHex, selectedImage, product;
+
+    if ('productId' in payloadOrProduct) {
+      // Structured payload from context/thunk
+      ({ productId, priceWhenAdded, selectedSize, selectedColorName, selectedColorHex, selectedImage } = payloadOrProduct);
+      // FIXED: Robust name handling (use passed name, or product string if it's a name, fallback to 'Product')
+      const productName = payloadOrProduct.name || (typeof payloadOrProduct.product === 'string' ? payloadOrProduct.product : 'Product');
+      // Create a minimal product object for local add (using known fields or defaults)
+      product = {
+        _id: productId,
+        id: productId,
+        name: productName,
+        price: priceWhenAdded
+      };
+    } else {
+      // Full product object (legacy/compatible)
+      product = payloadOrProduct;
+      if (typeof product !== 'object' || !product || (!product._id && !product.id)) {
+        console.error('Invalid product in addItemToWishlist:', product);
+        return { success: false, error: 'Invalid product data' };
+      }
+      productId = product._id || product.id;
+      priceWhenAdded = product.price || product.priceWhenAdded || product.originalPrice || 0;
+      selectedSize = product.selectedSize;
+      selectedColorName = product.selectedColorName;
+      selectedColorHex = product.selectedColorHex;
+      selectedImage = product.selectedImage;
+    }
+
+    // Final validation
+    if (!productId) {
+      console.error('Missing productId in addItemToWishlist:', payloadOrProduct);
+      return { success: false, error: 'Product ID required' };
+    }
 
     try {
-      dispatch(addToWishlistLocal({ product, priceWhenAdded }));
-      await dispatch(addToWishlist({ productId, priceWhenAdded })).unwrap();
+      // FIXED: Pass selections to local add for immediate UI
+      dispatch(addToWishlistLocal({ 
+        product, 
+        priceWhenAdded,
+        selectedSize,
+        selectedColorName,
+        selectedColorHex,
+        selectedImage
+      }));
+      await dispatch(addToWishlist({ 
+        productId, 
+        priceWhenAdded,
+        selectedSize,
+        selectedColorName,
+        selectedColorHex,
+        selectedImage
+      })).unwrap();
       return { success: true };
     } catch (error) {
       console.error('Failed to add to wishlist:', error);
@@ -158,6 +256,12 @@ export const useWishlist = () => {
 
   const removeItemFromWishlist = useCallback(async (productId) => {
     if (!isAuthenticated()) return { success: false, error: 'Authentication required' };
+
+    // FIXED: Validate productId
+    if (!productId || productId === 'undefined') {
+      console.error('Invalid productId in removeItemFromWishlist:', productId);
+      return { success: false, error: 'Invalid product ID' };
+    }
 
     try {
       dispatch(removeFromWishlistLocal(productId));
@@ -170,20 +274,66 @@ export const useWishlist = () => {
     }
   }, [dispatch]);
 
-  const toggleWishlistItemAction = useCallback(async (product) => {
+  const toggleWishlistItemAction = useCallback(async (payloadOrProduct) => {
     if (!isAuthenticated()) return { success: false, error: 'Authentication required' };
 
-    const productId = product.id || product._id;
-    const priceWhenAdded = product.price;
+    // FIXED: Handle both full product and structured payload (mirror addItemToWishlist)
+    let productId, priceWhenAdded, selectedSize, selectedColorName, selectedColorHex, selectedImage, product;
+
+    if ('productId' in payloadOrProduct) {
+      // Structured
+      ({ productId, priceWhenAdded, selectedSize, selectedColorName, selectedColorHex, selectedImage } = payloadOrProduct);
+      // FIXED: Robust name handling (use passed name, or product string if it's a name, fallback to 'Product')
+      const productName = payloadOrProduct.name || (typeof payloadOrProduct.product === 'string' ? payloadOrProduct.product : 'Product');
+      product = {
+        _id: productId,
+        id: productId,
+        name: productName,
+        price: priceWhenAdded
+      };
+    } else {
+      // Full product
+      product = payloadOrProduct;
+      if (typeof product !== 'object' || !product || (!product._id && !product.id)) {
+        console.error('Invalid product in toggleWishlistItemAction:', product);
+        return { success: false, error: 'Invalid product data' };
+      }
+      productId = product._id || product.id;
+      priceWhenAdded = product.price || product.priceWhenAdded || product.originalPrice || 0;
+      selectedSize = product.selectedSize;
+      selectedColorName = product.selectedColorName;
+      selectedColorHex = product.selectedColorHex;
+      selectedImage = product.selectedImage;
+    }
+
+    if (!productId) {
+      console.error('Missing productId in toggleWishlistItemAction:', payloadOrProduct);
+      return { success: false, error: 'Product ID required' };
+    }
+
     const isCurrentlyInWishlist = itemChecks[productId] || false;
 
     try {
       if (isCurrentlyInWishlist) {
         dispatch(removeFromWishlistLocal(productId));
       } else {
-        dispatch(addToWishlistLocal({ product, priceWhenAdded }));
+        dispatch(addToWishlistLocal({ 
+          product, 
+          priceWhenAdded,
+          selectedSize,
+          selectedColorName,
+          selectedColorHex,
+          selectedImage
+        }));
       }
-      const result = await dispatch(toggleWishlistItem({ productId, priceWhenAdded })).unwrap();
+      const result = await dispatch(toggleWishlistItem({ 
+        productId, 
+        priceWhenAdded,
+        selectedSize,
+        selectedColorName,
+        selectedColorHex,
+        selectedImage
+      })).unwrap();
       dispatch(getWishlist());
       return { success: true, action: result.action };
     } catch (error) {
@@ -195,6 +345,12 @@ export const useWishlist = () => {
 
   const checkIfInWishlist = useCallback(async (productId) => {
     if (!isAuthenticated()) return { success: false, exists: false };
+
+    // FIXED: Validate productId
+    if (!productId || productId === 'undefined') {
+      console.error('Invalid productId in checkIfInWishlist:', productId);
+      return { success: false, exists: false, error: 'Invalid product ID' };
+    }
 
     if (itemChecks.hasOwnProperty(productId)) {
       return { success: true, exists: itemChecks[productId] };
@@ -209,13 +365,17 @@ export const useWishlist = () => {
     }
   }, [dispatch, itemChecks]);
 
-  // ---------- NEW/UPDATED: Move item to cart (single) ----------
-  // Accepts either productId or product object; optional overrides for size/color/image
+  // ---------- Move item to cart (single) ----------
   const moveItemToCart = useCallback(async (productOrId, quantity = 1, size = 'M', colorName = '', colorHex = '', selectedImage = '') => {
     if (!isAuthenticated()) return { success: false, error: 'Authentication required' };
 
-    // Determine productId and try to find an enriched item
-    const productId = typeof productOrId === 'string' ? productOrId : (productOrId.id || productOrId._id);
+    // FIXED: Validate input
+    const productId = typeof productOrId === 'string' ? productOrId : (productOrId?._id || productOrId?.id);
+    if (!productId || productId === 'undefined') {
+      console.error('Invalid productId in moveItemToCart:', productOrId);
+      return { success: false, error: 'Invalid product ID' };
+    }
+
     let productObj = enrichedItems.find(it => (it.id === productId || it._id === productId));
 
     try {
@@ -225,27 +385,35 @@ export const useWishlist = () => {
         productObj = resp.data;
       }
 
+      // FIXED: Prioritize selections from enrichedItem (e.g., selectedSize from wishlist state)
+      const enrichedItem = enrichedItems.find(it => (it.id === productId || it._id === productId));
+      const finalSize = (enrichedItem?.selectedSize || size).toLowerCase();
+      const finalColorName = enrichedItem?.selectedColorName || colorName || '';
+      const finalColorHex = enrichedItem?.selectedColorHex || colorHex || '';
+
       // Pick default color from productObj.colors[0] if caller didn't provide colorName
       const defaultColor = (productObj && Array.isArray(productObj.colors) && productObj.colors.length > 0)
         ? (productObj.colors[0])
         : { colorName: 'Default', colorHex: '#000000' };
 
-      const finalColorName = colorName && colorName.trim() ? colorName : (defaultColor.colorName || defaultColor.name || 'Default');
-      const finalColorHex = colorHex && colorHex.trim() ? colorHex : (defaultColor.colorHex || defaultColor.hex || '#000000');
+      const useColorName = finalColorName && finalColorName.trim() ? finalColorName : (defaultColor.colorName || defaultColor.name || 'Default');
+      const useColorHex = finalColorHex && finalColorHex.trim() ? finalColorHex : (defaultColor.colorHex || defaultColor.hex || '#000000');
 
-      // Pick a sensible selectedImage if none passed
-      const finalImage = selectedImage && selectedImage.trim()
+      // Pick a sensible selectedImage if none passed (prioritize enriched)
+      const useImage = enrichedItem?.selectedImage || selectedImage && selectedImage.trim()
         ? selectedImage
         : (productObj?.colors?.[0]?.images?.[0] || productObj?.images?.[0] || productObj?.image || '');
+
+      console.log('moveItemToCart using:', { productId, finalSize, useColorName, useImage }); // Debug
 
       // Dispatch the thunk that calls POST /wishlist/move-to-cart/:productId
       await dispatch(moveWishlistItemToCart({
         productId,
         quantity,
-        size: size.toLowerCase(),
-        colorName: finalColorName,
-        colorHex: finalColorHex,
-        selectedImage: finalImage
+        size: finalSize,
+        colorName: useColorName,
+        colorHex: useColorHex,
+        selectedImage: useImage
       })).unwrap();
 
       // Successful
@@ -258,7 +426,7 @@ export const useWishlist = () => {
     }
   }, [dispatch, enrichedItems]);
 
-  // ---------- NEW/UPDATED: Move ALL wishlist items to cart (bulk) ----------
+  // ---------- Move ALL wishlist items to cart (bulk) ----------
   const moveAllToCart = useCallback(async () => {
     if (!isAuthenticated()) {
       return { success: false, error: 'Authentication required' };
@@ -271,29 +439,38 @@ export const useWishlist = () => {
       const results = await Promise.allSettled(
         enrichedItems.map(async (item) => {
           const productId = item.id || item._id;
-          // Derive default color and image the same way as single-item flow
+          if (!productId || productId === 'undefined') {
+            console.warn('Skipping invalid item in bulk move:', item);
+            return Promise.resolve({ success: false }); // Settled as fulfilled but note failure
+          }
+
+          // FIXED: Use item's selections if available
+          const finalSize = (item.selectedSize || 'm').toLowerCase();
+          const colorName = item.selectedColorName || '';
+          const colorHex = item.selectedColorHex || '';
+
           const defaultColor = (item && Array.isArray(item.colors) && item.colors.length > 0)
             ? item.colors[0]
             : { colorName: 'Default', colorHex: '#000000' };
 
-          const colorName = defaultColor.colorName || defaultColor.name || 'Default';
-          const colorHex = defaultColor.colorHex || defaultColor.hex || '#000000';
-          const selectedImage = item.image || item.images?.[0] || '';
+          const useColorName = colorName && colorName.trim() ? colorName : (defaultColor.colorName || defaultColor.name || 'Default');
+          const useColorHex = colorHex && colorHex.trim() ? colorHex : (defaultColor.colorHex || defaultColor.hex || '#000000');
+          const selectedImage = item.selectedImage || item.image || item.images?.[0] || '';
 
           // call the thunk; unwrap inside map so Promise reflects success/rejection
           return dispatch(moveWishlistItemToCart({
             productId,
             quantity: 1,
-            size: 'm',
-            colorName,
-            colorHex,
-            selectedImage
+            size: finalSize,
+            colorName: useColorName,
+            colorHex: useColorHex,
+            selectedImage: selectedImage
           })).unwrap();
         })
       );
 
-      const successes = results.filter(r => r.status === 'fulfilled').length;
-      const failures = results.filter(r => r.status === 'rejected').length;
+      const successes = results.filter(r => r.status === 'fulfilled' && r.value?.success !== false).length;
+      const failures = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && r.value?.success === false)).length;
 
       return {
         success: failures === 0,

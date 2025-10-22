@@ -1,9 +1,8 @@
-// src/components/WishlistContext.jsx - Updated for new API structure
 import React, { createContext, useContext } from "react";
 import { useDispatch } from "react-redux";
 import { useWishlist as useWishlistHook } from "../hooks/useWishlist";
-import { addToCartAsync } from "../Redux/slices/cartSlice";
-import { removeFromWishlist } from "../Redux/slices/WishlistSlice";
+import { addToCartAsync, fetchCartDetails } from "../Redux/slices/cartSlice";
+import { removeFromWishlist as removeFromWishlistThunk } from "../Redux/slices/WishlistSlice";
 import Notification from "./Notification";
 
 const WishlistContext = createContext();
@@ -12,70 +11,100 @@ export const WishlistProvider = ({ children }) => {
   const dispatch = useDispatch();
   
   const {
-    // State
     wishlistItems,
     loading,
     error,
     count,
-    clearing, // Added clearing state
-    
-    // Actions from hook
+    clearing,
     addToWishlist: addToWishlistAction,
     removeFromWishlist: removeFromWishlistAction,
     toggleWishlist: toggleWishlistAction,
-    
-    // Other actions
     moveToCart,
     moveAllToCart,
     clearWishlist,
     refreshWishlist,
-    
-    // Helpers
     isItemInWishlist,
     isWishlistEmpty,
     getWishlistTotal,
     isAuthenticated
   } = useWishlistHook();
 
-  // Notification state
   const [notification, setNotification] = React.useState(null);
 
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
   };
 
-  // Wrapper functions with notifications
-  const addToWishlist = async (product) => {
-  
+  const addToWishlist = async (product, selectedSize = null, selectedColorName = null, selectedColorHex = null, selectedImage = null) => {
     if (!isAuthenticated) {
       showNotification('Please login to use wishlist', 'error');
       return { success: false };
     }
 
-    // Ensure we're capturing colors and their sizeStock
-    if (product.colors?.length > 0) {
-      console.log('Product colors and their sizes:', product.colors.map(color => ({
-        colorName: color.colorName,
-        colorHex: color.colorHex,
-        sizes: color.sizeStock?.map(s => `${s.size} (stock: ${s.stock})`) || []
-      })));
-    } else {
-      console.warn('No colors/sizeStock found in product:', product);
+    if (typeof product !== 'object' || product === null) {
+      console.error('Invalid product argument:', product);
+      showNotification('Invalid product data. Cannot add to wishlist.', 'error');
+      return { success: false, error: 'Invalid product object' };
     }
 
-    const result = await addToWishlistAction(product);
-    if (result.success) {
-      showNotification(`${product.brand || product.name} added to wishlist!`);
-    } else {
-      showNotification(
-        result.error === 'Authentication required' 
-          ? 'Please login to use wishlist' 
-          : `Failed to add ${product.brand || product.name} to wishlist`,
-        'error'
-      );
+    if (!product._id && !product.id) {
+      console.error('Product missing ID:', product);
+      showNotification('Product ID is missing. Cannot add to wishlist.', 'error');
+      return { success: false, error: 'Product ID required' };
     }
-    
-    return result;
+
+    const productWithSelection = {
+      ...product,
+      selectedSize: selectedSize || product.selectedSize,
+      selectedColorName: selectedColorName || product.selectedColorName,
+      selectedColorHex: selectedColorHex || product.selectedColorHex,
+      selectedImage: selectedImage || product.selectedImage
+    };
+
+    console.log('Full productWithSelection object:', productWithSelection);
+    console.log('Adding to wishlist with selection:', {
+      product: productWithSelection.brand || productWithSelection.name,
+      productId: productWithSelection._id || productWithSelection.id,
+      selectedSize: productWithSelection.selectedSize,
+      selectedColorName: productWithSelection.selectedColorName,
+      selectedImage: productWithSelection.selectedImage
+    });
+
+    const payload = {
+      productId: productWithSelection._id || productWithSelection.id,
+      priceWhenAdded: productWithSelection.price || productWithSelection.priceWhenAdded || productWithSelection.originalPrice || 0,
+      selectedSize: productWithSelection.selectedSize,
+      selectedColorName: productWithSelection.selectedColorName,
+      selectedColorHex: productWithSelection.selectedColorHex,
+      selectedImage: productWithSelection.selectedImage
+    };
+
+    if (!payload.productId) {
+      console.error('Formatted payload missing productId:', payload);
+      showNotification('Failed to extract product ID.', 'error');
+      return { success: false, error: 'Product ID extraction failed' };
+    }
+
+    try {
+      const result = await addToWishlistAction(payload);
+      
+      if (result && (result.success || !result.error)) {
+        showNotification(`${productWithSelection.brand || productWithSelection.name} added to wishlist!`);
+        return { success: true };
+      } else {
+        showNotification(
+          result?.error === 'Authentication required' 
+            ? 'Please login to use wishlist' 
+            : `Failed to add ${productWithSelection.brand || productWithSelection.name} to wishlist: ${result?.error || 'Unknown error'}`,
+          'error'
+        );
+        return { success: false, error: result?.error };
+      }
+    } catch (error) {
+      console.error('Thunk dispatch error:', error);
+      showNotification(`Failed to add to wishlist: ${error.message}`, 'error');
+      return { success: false, error: error.message };
+    }
   };
 
   const removeFromWishlist = async (productId) => {
@@ -91,162 +120,200 @@ export const WishlistProvider = ({ children }) => {
     return result;
   };
 
-  const toggleWishlist = async (product) => {
+  const toggleWishlist = async (product, selectedSize = null, selectedColorName = null, selectedColorHex = null, selectedImage = null) => {
     if (!isAuthenticated) {
       showNotification('Please login to use wishlist', 'error');
       return { success: false };
     }
 
-    const productId = product.id || product._id;
+    if (typeof product !== 'object' || product === null) {
+      console.error('Invalid product for toggle:', product);
+      showNotification('Invalid product data. Cannot toggle wishlist.', 'error');
+      return { success: false };
+    }
+
+    if (!product._id && !product.id) {
+      console.error('Product missing ID for toggle:', product);
+      showNotification('Product ID is missing. Cannot toggle wishlist.', 'error');
+      return { success: false };
+    }
+
+    const productId = product._id || product.id;
     const wasInWishlist = isItemInWishlist(productId);
     
-    const result = await toggleWishlistAction(product);
-    
-    if (result.success) {
-      const action = result.action || (wasInWishlist ? 'removed' : 'added');
-      const message = action === 'added' 
-        ? `${product.brand || product.name} added to wishlist!`
-        : `${product.brand || product.name} removed from wishlist!`;
-      const type = action === 'added' ? 'success' : 'info';
-      
-      showNotification(message, type);
-    } else {
-      showNotification(
-        `Failed to ${wasInWishlist ? 'remove from' : 'add to'} wishlist`,
-        'error'
-      );
-    }
-    
-    return result;
-  };
-
-  // Move item to cart with enhanced parameters - Updated for new API
-const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, selectedImage = '') => {
-  try {
-    if (!productId) {
-      throw new Error('Product ID is required');
-    }
-
-    // Find the item in the wishlist using the product ID (item.id), not wishlist item ID (item._id)
-    const foundItem = wishlistItems?.find((item) => {
-      const itemProductId = item.id || (item.product && (item.product._id || item.product.id)) || item._id;
-      return itemProductId === productId;
-    });
-
-    if (!foundItem) {
-      console.error('ITEM NOT FOUND!');
-      console.error('Searched for product ID:', productId);
-      console.error('Available product IDs:', wishlistItems.map(item => item.id || (item.product && item.product._id)));
-      throw new Error('Item not found in wishlist');
-    }
-
-    
-    const productData = foundItem.product || foundItem;
-    const correctProductId = foundItem.id || productData.id || productData._id;
-
-    // If color object is complete, use it directly
-    let finalColor = color;
-    let finalSize = size;
-    let finalImage = selectedImage;
-
-    // If color object is empty or incomplete, get from product data
-    if (!color || !color.colorName || !color.colorHex) {
-      const availableColors = productData.colors;
-
-      if (!availableColors || availableColors.length === 0) {
-        throw new Error('No color information available for this product');
-      }
-
-      // Find the color that has the requested size in its sizeStock, or use first color
-      let selectedColor = availableColors.find((color) =>
-        color.sizeStock?.some((s) => s.size === size)
-      ) || availableColors[0];
-
-      if (!selectedColor) {
-        throw new Error('No color information available for this product');
-      }
-
-      // Create complete color object
-      finalColor = {
-        colorName: selectedColor.colorName || 'Default',
-        colorHex: selectedColor.colorHex || '#000000',
-        images: selectedColor.images || [],
-        sizeStock: selectedColor.sizeStock || [],
-        _id: selectedColor._id
-      };
-
-      // Get available sizes from the selected color
-      const availableSizes = selectedColor.sizeStock?.map((s) => s.size) || [];
-
-      if (availableSizes.length === 0) {
-        throw new Error('No sizes available for this product');
-      }
-
-      // Use the requested size if available, otherwise use first available size
-      finalSize = availableSizes.includes(size) ? size : availableSizes[0];
-
-      // Get image from selected color
-      finalImage = selectedColor.images?.[0] || productData.image;
-    }
-
-    if (!finalImage) {
-      throw new Error('Product image is required');
-    }
-
-    // Check stock availability
-    const sizeStockInfo = finalColor.sizeStock?.find((s) => s.size === finalSize);
-    if (sizeStockInfo && quantity > sizeStockInfo.stock) {
-      throw new Error(`Only ${sizeStockInfo.stock} items available in size ${finalSize}`);
-    }
-
-    // Get the correct product ID for the API call
-    //const correctProductId = productData._id || productData.id;
-
-    // Prepare data for the async action
-    const asyncCartData = {
-      productId: correctProductId, // Use the correct product ID
-      quantity,
-      size: finalSize,
-      color: finalColor, // Pass complete color object
-      selectedImage: finalImage,
-      fromWishlist: true
+    const productWithSelection = {
+      ...product,
+      selectedSize: selectedSize || product.selectedSize,
+      selectedColorName: selectedColorName || product.selectedColorName,
+      selectedColorHex: selectedColorHex || product.selectedColorHex,
+      selectedImage: selectedImage || product.selectedImage
     };
 
+    console.log('Full productWithSelection for toggle:', productWithSelection);
 
-    // Add to cart using the async action
+    const payload = {
+      productId,
+      priceWhenAdded: productWithSelection.price || productWithSelection.priceWhenAdded || productWithSelection.originalPrice || 0,
+      selectedSize: productWithSelection.selectedSize,
+      selectedColorName: productWithSelection.selectedColorName,
+      selectedColorHex: productWithSelection.selectedColorHex,
+      selectedImage: productWithSelection.selectedImage
+    };
+
+    if (!payload.productId) {
+      showNotification('Failed to extract product ID for toggle.', 'error');
+      return { success: false };
+    }
+
     try {
+      const result = await toggleWishlistAction(payload);
+      
+      if (result && (result.success || !result.error)) {
+        const action = result.action || (wasInWishlist ? 'removed' : 'added');
+        const message = action === 'added' 
+          ? `${productWithSelection.brand || productWithSelection.name} added to wishlist!`
+          : `${productWithSelection.brand || productWithSelection.name} removed from wishlist!`;
+        const type = action === 'added' ? 'success' : 'info';
+        
+        showNotification(message, type);
+        return { success: true };
+      } else {
+        showNotification(
+          `Failed to ${wasInWishlist ? 'remove from' : 'add to'} wishlist: ${result?.error || 'Unknown error'}`,
+          'error'
+        );
+        return { success: false, error: result?.error };
+      }
+    } catch (error) {
+      console.error('Toggle thunk error:', error);
+      showNotification(`Failed to toggle wishlist: ${error.message}`, 'error');
+      return { success: false, error: error.message };
+    }
+  };
+
+  const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, selectedImage = '') => {
+    try {
+      if (!productId) {
+        throw new Error('Product ID is required');
+      }
+
+      console.log('moveItemToCart called with:', {
+        productId,
+        quantity,
+        size,
+        color,
+        selectedImage
+      });
+
+      const foundItem = wishlistItems?.find((item) => {
+        const itemProductId = item.id || (item.product && (item.product._id || item.product.id)) || item._id;
+        const matches = itemProductId === productId || item._id === productId || item.id === productId;
+        console.log('Checking item:', {
+          itemId: item.id,
+          itemProductId: itemProductId,
+          productId: productId,
+          matches: matches,
+          selectedSize: item.selectedSize,
+          selectedColorName: item.selectedColorName
+        });
+        return matches;
+      });
+
+      if (!foundItem) {
+        console.error('Item not found in wishlist. Available items:', wishlistItems.map(item => ({
+          id: item.id,
+          productId: item.product?._id,
+          selectedSize: item.selectedSize
+        })));
+        throw new Error('Item not found in wishlist');
+      }
+
+      console.log('Found item in wishlist:', {
+        selectedSize: foundItem.selectedSize,
+        selectedColorName: foundItem.selectedColorName,
+        selectedImage: foundItem.selectedImage
+      });
+
+      const productData = foundItem.product || foundItem;
+      const correctProductId = foundItem.id || productData.id || productData._id;
+
+      let finalSize = foundItem.selectedSize || size;
+      let finalColorName = foundItem.selectedColorName || color.colorName || 'Assorted colors';
+      let finalColorHex = foundItem.selectedColorHex || color.colorHex || '#808080';
+      let finalImage = foundItem.selectedImage || selectedImage || productData.image;
+
+      if (!finalSize && productData.colors) {
+        const firstColor = productData.colors[0];
+        if (firstColor?.sizeStock?.[0]) {
+          finalSize = firstColor.sizeStock[0].size;
+        }
+      }
+
+      console.log('Moving to cart with FINAL values:', {
+        productId: correctProductId,
+        size: finalSize,
+        colorName: finalColorName,
+        colorHex: finalColorHex,
+        image: finalImage,
+        storedSize: foundItem.selectedSize,
+        passedSize: size
+      });
+
+      const asyncCartData = {
+        productId: correctProductId,
+        quantity,
+        size: finalSize,
+        color: {
+          colorName: finalColorName,
+          colorHex: finalColorHex
+        },
+        selectedImage: finalImage,
+        fromWishlist: true
+      };
+
+      // FIXED: Call addToCartAsync directly through dispatch
       const cartResponse = await dispatch(addToCartAsync(asyncCartData)).unwrap();
 
       if (cartResponse && cartResponse.success !== false) {
-        // If cart addition was successful, remove from wishlist
-        await dispatch(removeFromWishlist(foundItem.id || foundItem._id)).unwrap();
-        showNotification(`${productData.name} - Item moved to cart!`, 'success');
+        // Remove from wishlist after successful cart add
+        await removeFromWishlistAction(correctProductId);
+        
+        // FIXED: Refresh cart details to sync Navbar and other components
+        try {
+          await dispatch(fetchCartDetails()).unwrap();
+        } catch (cartRefreshError) {
+          console.warn('Cart refresh error (non-critical):', cartRefreshError);
+        }
+        
+        showNotification('Item moved to cart!', 'success');
+        console.log('Before refreshWishlist, wishlistItems:', wishlistItems);
+        await refreshWishlist();
+        console.log('After refreshWishlist, wishlistItems:', wishlistItems);
         return { success: true };
       } else {
         throw new Error(cartResponse?.message || 'Failed to add item to cart');
       }
     } catch (error) {
-      //console.error('Cart API error:', error);
-      throw new Error(error?.message || 'Failed to move item to cart');
+      console.error('Error moving item to cart:', error);
+      showNotification(error.message || 'Failed to move item to cart', 'error');
+      return { success: false, error: error.message };
     }
-  } catch (error) {
-    //console.error('Error moving item to cart:', error);
-    //showNotification(error.message || 'Failed to move item to cart', 'error');
-    return { success: false, error: error.message };
-  }
-};
+  };
 
-  // Move all items to cart with notification
   const moveAllItemsToCart = async () => {
     if (isWishlistEmpty()) {
       showNotification('Your wishlist is empty', 'info');
       return { success: false };
     }
 
+    console.log('Before moveAllToCart, wishlistItems:', wishlistItems);
     const result = await moveAllToCart();
     
     if (result.success) {
-      showNotification(`All items moved to cart!`);
+      showNotification('All items moved to cart!', 'success');
+      console.log('Before refreshWishlist (moveAll), wishlistItems:', wishlistItems);
+      await refreshWishlist();
+      console.log('After refreshWishlist (moveAll), wishlistItems:', wishlistItems);
     } else {
       const message = result.moved > 0 
         ? `${result.moved} items moved to cart, ${result.failed} failed`
@@ -257,7 +324,6 @@ const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, se
     return result;
   };
 
-  // Clear wishlist with notification - Updated for new API
   const clearWishlistItems = async () => {
     if (isWishlistEmpty()) {
       showNotification('Your wishlist is already empty', 'info');
@@ -275,27 +341,19 @@ const moveItemToCart = async (productId, quantity = 1, size = '', color = {}, se
     return result;
   };
 
-  // Enhanced context value with backward compatibility
   const contextValue = {
-    // Original API for backward compatibility
     wishlistItems,
     addToWishlist,
     removeFromWishlist,
     toggleWishlist,
-    
-    // Extended API
     moveToCart: moveItemToCart,
     moveAllToCart: moveAllItemsToCart,
     clearWishlist: clearWishlistItems,
     refreshWishlist,
-    
-    // State
     loading,
     error,
     count,
-    clearing, // Added clearing state
-    
-    // Helpers
+    clearing,
     isItemInWishlist,
     isWishlistEmpty,
     totalValue: getWishlistTotal(),
