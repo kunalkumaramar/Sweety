@@ -343,7 +343,13 @@ const ProductDetail = () => {
           description: currentProduct.description,
         };
 
-        await addToWishlist(productForWishlist);
+        await addToWishlist(
+          productForWishlist,
+          selectedSize,              // Now passing "38"
+          selectedColor?.colorName,  // Now passing "Blue"
+          selectedColor?.colorHex,   // Now passing the hex color
+          currentImage               // Now passing the image
+        );
       }
     } catch (error) {
       console.error("Failed to update wishlist:", error);
@@ -1061,9 +1067,7 @@ const ProductDetail = () => {
         </section>
       )}
     </div>
-    </>
-
-    
+    </>    
   );
 };
 

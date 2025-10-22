@@ -47,6 +47,7 @@ const UserProfile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      setError(""); // Clear any previous errors
       const response = await apiService.getUserProfile();
       setProfileData(response.data);
       setFormData({
@@ -57,8 +58,19 @@ const UserProfile = () => {
         addresses: response.data.addresses || []
       });
     } catch (error) {
-      setError("Failed to fetch profile data");
+      const errorMsg = error.message || "Failed to fetch profile data";
+      setError(errorMsg);
       console.error("Profile fetch error:", error);
+      
+      // Handle authentication errors immediately
+      if (errorMsg.includes('401') || 
+          errorMsg.includes('unauthorized') || 
+          errorMsg.includes('token') || 
+          errorMsg.includes('expired')) {
+        dispatch(logout());
+        window.location.href = "/";
+        return;
+      }
     } finally {
       setLoading(false);
     }
@@ -142,6 +154,12 @@ const UserProfile = () => {
     window.location.href = "/";
   };
 
+  // If not authenticated, redirect immediately (additional safety check)
+  if (!isAuthenticated) {
+    window.location.href = "/";
+    return null;
+  }
+
   // Loading state for profile tab only
   if (loading && activeTab === 'profile') {
     return (
@@ -149,6 +167,17 @@ const UserProfile = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-pink-500 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If profile data failed to load and it's an auth error, don't render (redirect handled above)
+  if (activeTab === 'profile' && !profileData && !loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600">Authentication expired. Redirecting to login...</p>
         </div>
       </div>
     );
@@ -208,7 +237,7 @@ const UserProfile = () => {
               <div>
                 {/* Profile Content */}
                 {/* Messages */}
-                {error && (
+                {error && !loading && (
                   <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
                     {error}
                   </div>
@@ -515,5 +544,3 @@ const UserProfile = () => {
 };
 
 export default UserProfile;
-
- 

@@ -81,6 +81,7 @@ const WishlistItem = ({
   };
 
   const handleMoveToCart = async () => {
+<<<<<<< HEAD
     try {
       // Extract the product data
       const productData = item.product || item;
@@ -135,16 +136,72 @@ const WishlistItem = ({
 
       if (result && result.success) {
         // Animate removal since item was moved
+=======
+    try {  
+      // Extract the product data
+      const productData = item.product || item;  
+      // Get the actual product ID - the one that matches with products in the system
+      const productId = item.id || productData.id || productData._id;
+      
+      if (!productId) {
+        console.error('No product ID found. Item structure:', item);
+        return;
+      }
+
+      console.log('handleMoveToCart - Item details:', {
+        productId,
+        selectedSize: item.selectedSize,
+        selectedColorName: item.selectedColorName,
+        selectedImage: item.selectedImage
+      });
+
+      // FIX #1: ALWAYS use stored size/color from the wishlist item
+      const finalSize = item.selectedSize || '30';
+      const finalColorName = item.selectedColorName || 'Assorted colors';
+      const finalColorHex = item.selectedColorHex || '#808080';
+      const finalImage = item.selectedImage || productData.image;
+
+      console.log('Calling moveToCart with:', {
+        productId,
+        size: finalSize,
+        colorName: finalColorName,
+        colorHex: finalColorHex,
+        image: finalImage
+      });
+
+      // Call moveToCart with size/color from stored wishlist item
+      const result = await moveToCart(
+        productId,
+        1,
+        finalSize,
+        {
+          colorName: finalColorName,
+          colorHex: finalColorHex
+        },
+        finalImage
+      );
+
+      if (result && result.success) {
+        // FIX #2: Immediately animate and remove from UI
+>>>>>>> newmain
         gsap.to(itemRef.current, {
           x: 100,
           opacity: 0,
           duration: 0.3,
+<<<<<<< HEAD
           ease: "power2.in",
         });
       }
     } catch (error) {
       console.error("Failed to move item to cart:", error);
       // You might want to show a notification here
+=======
+          ease: 'power2.in',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to move item to cart:', error);
+>>>>>>> newmain
     }
   };
 
@@ -178,7 +235,18 @@ const WishlistItem = ({
         >
           {item.brand || item.name}
         </div>
+<<<<<<< HEAD
 
+=======
+        
+        {/* Selected Size Display */}
+        {item.selectedSize && (
+          <div className="text-xs text-gray-600 mb-2">
+            Size: {item.selectedSize}
+          </div>
+        )}
+        
+>>>>>>> newmain
         {/* Price Section for Mobile */}
         <div className="flex items-center gap-2 mb-3">
           <div className="text-lg font-semibold text-gray-800">
@@ -250,6 +318,14 @@ const WishlistItem = ({
           >
             {item.brand || item.name}
           </div>
+          
+          {/* Selected Size Display */}
+          {item.selectedSize && (
+            <div className="text-xs text-gray-600 mb-2">
+              Size: {item.selectedSize}
+            </div>
+          )}
+          
           {/* Price Section */}
           <div className="flex items-center gap-2 mb-3">
             <div className="text-lg font-semibold text-gray-800">
@@ -362,12 +438,16 @@ const RecommendationItem = ({ item, addToWishlist }) => {
       className="flex gap-3 py-3 border-b border-gray-200 last:border-b-0 transition-all duration-300"
     >
       <img
+<<<<<<< HEAD
         src={
           item.colors?.[0]?.images?.[0] ||
           item.images?.[0] ||
           item.image ||
           "/placeholder.png"
         }
+=======
+        src={item.colors?.[0]?.images?.[0] || item.images?.[0] || item.image || '/placeholder.png'}
+>>>>>>> newmain
         alt={item.description || item.name}
         className="w-16 h-16 sm:w-20 sm:h-20 rounded-md object-cover flex-shrink-0 cursor-pointer"
         onClick={goToDetail}
@@ -429,13 +509,18 @@ const Wishlist = () => {
   const [rawRecommendations, setRawRecommendations] = useState([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(true);
 
+<<<<<<< HEAD
   const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+=======
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+>>>>>>> newmain
 
   useEffect(() => {
     const fetchRecommendations = async () => {
       try {
         setLoadingRecommendations(true);
+<<<<<<< HEAD
 
         // Fetch categories
         const categoriesRes = await fetch(`${API_BASE_URL}/category`);
@@ -452,6 +537,22 @@ const Wishlist = () => {
           const subcategoriesData = await subcategoriesRes.json();
           const subcategories = subcategoriesData.data || [];
 
+=======
+        
+        // Fetch categories
+        const categoriesRes = await fetch(`${API_BASE_URL}/category`);
+        const categoriesData = await categoriesRes.json();
+        const categories = categoriesData.data || [];
+
+        const products = [];
+
+        for (const category of categories) {
+          // Fetch subcategories
+          const subcategoriesRes = await fetch(`${API_BASE_URL}/sub-category/category/${category._id}`);
+          const subcategoriesData = await subcategoriesRes.json();
+          const subcategories = subcategoriesData.data || [];
+
+>>>>>>> newmain
           if (subcategories.length > 0) {
             // If subcategories exist, fetch one product from each
             for (const subcategory of subcategories) {
@@ -460,13 +561,22 @@ const Wishlist = () => {
               );
               const productsData = await productsRes.json();
               const latestProducts = productsData.data?.products || [];
+<<<<<<< HEAD
 
               latestProducts.forEach((latestProduct) => {
+=======
+              
+              latestProducts.forEach(latestProduct => {
+>>>>>>> newmain
                 if (latestProduct) {
                   products.push({
                     ...latestProduct,
                     categoryName: category.name,
+<<<<<<< HEAD
                     subcategoryName: subcategory.name,
+=======
+                    subcategoryName: subcategory.name
+>>>>>>> newmain
                   });
                 }
               });
@@ -484,7 +594,11 @@ const Wishlist = () => {
                 products.push({
                   ...latestProduct,
                   categoryName: category.name,
+<<<<<<< HEAD
                   subcategoryName: null,
+=======
+                  subcategoryName: null
+>>>>>>> newmain
                 });
               }
             });
@@ -493,25 +607,40 @@ const Wishlist = () => {
 
         setRawRecommendations(products);
       } catch (err) {
+<<<<<<< HEAD
         console.error("Error fetching recommendations:", err);
+=======
+        console.error('Error fetching recommendations:', err);
+>>>>>>> newmain
         setRawRecommendations([]);
       } finally {
         setLoadingRecommendations(false);
       }
     };
 
+<<<<<<< HEAD
     const cacheKey = "wishlist_raw_recs";
+=======
+    const cacheKey = 'wishlist_raw_recs';
+>>>>>>> newmain
     const cached = localStorage.getItem(cacheKey);
     const cacheTime = localStorage.getItem(`${cacheKey}_time`);
     const now = Date.now();
     const cacheExpiry = 3600000; // 1 hour
 
+<<<<<<< HEAD
     if (cached && cacheTime && now - parseInt(cacheTime) < cacheExpiry) {
+=======
+    if (cached && cacheTime && (now - parseInt(cacheTime)) < cacheExpiry) {
+>>>>>>> newmain
       setRawRecommendations(JSON.parse(cached));
       setLoadingRecommendations(false);
     } else {
       fetchRecommendations();
+<<<<<<< HEAD
       // Cache will be set in the filter effect after fetch
+=======
+>>>>>>> newmain
     }
   }, [API_BASE_URL]);
 
@@ -521,12 +650,18 @@ const Wishlist = () => {
       return;
     }
 
+<<<<<<< HEAD
     const cacheKey = "wishlist_raw_recs";
     const filteredProducts = rawRecommendations
       .filter(
         (product) =>
           !wishlistItems.find((item) => (item.id || item._id) === product._id)
       )
+=======
+    const cacheKey = 'wishlist_raw_recs';
+    const filteredProducts = rawRecommendations
+      .filter(product => !wishlistItems.find(item => (item.id || item._id) === product._id))
+>>>>>>> newmain
       .slice(0, 6);
 
     setRecommendations(filteredProducts);
@@ -553,8 +688,11 @@ const Wishlist = () => {
   // Handle add all to cart
   const handleAddAllToCart = async () => {
     if (wishlistItems.length === 0) return;
+<<<<<<< HEAD
 
     // Use moveAllToCart which handles API calls and removes items from wishlist
+=======
+>>>>>>> newmain
     await moveAllToCart();
   };
 
@@ -595,8 +733,12 @@ const Wishlist = () => {
           <button
             className="bg-pink-600 text-white py-3 px-6 rounded-2xl font-medium hover:bg-pink-700 transition-colors"
             onClick={() => {
+<<<<<<< HEAD
               // You can trigger your login modal here or redirect to login page
               console.log("Trigger login modal");
+=======
+              console.log('Trigger login modal');
+>>>>>>> newmain
             }}
           >
             Sign In
@@ -612,7 +754,7 @@ const Wishlist = () => {
       <div className="lg:hidden">
         <div
           ref={containerRef}
-          className="p-3 pb-24" // Add bottom padding for footer
+          className="p-3 pb-24"
         >
           {/* Quick Actions - Mobile First */}
           <div className="bg-white rounded-xl p-4 shadow-lg mb-4">

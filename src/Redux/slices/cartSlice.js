@@ -1,24 +1,39 @@
-// src/Redux/slices/cartSlice.js - Complete implementation with guest cart support
+// src/Redux/slices/cartSlice.js - Complete implementation with guest cart support and token expiration handling
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { apiService } from '../../services/api';
+import { logout } from './authSlice'; // Import logout action to clear auth state
 
 // ===== ASYNC THUNKS =====
 
-// Fetch cart details (automatically handles guest/authenticated users)
+// Fetch cart details (automatically handles guest/authenticated users, with token refresh fallback to guest)
 export const fetchCartDetails = createAsyncThunk(
   'cart/fetchCartDetails',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, dispatch }) => {
     try {
+      let response;
       const isAuth = !!localStorage.getItem('token');
       
       if (isAuth) {
-        const response = await apiService.getCartDetails();
-        return response.data;
+        try {
+          response = await apiService.getCartDetails();
+        } catch (apiError) {
+          if (apiError.message?.includes('401') || 
+              apiError.message?.includes('unauthorized') || 
+              apiError.message?.includes('token') ||
+              apiError.message?.includes('expired')) {
+            // Clear auth and switch to guest
+            dispatch(logout());
+            const sessionId = apiService.getSessionId();
+            response = await apiService.getGuestCartDetails(sessionId);
+          } else {
+            throw apiError;
+          }
+        }
       } else {
         const sessionId = apiService.getSessionId();
-        const response = await apiService.getGuestCartDetails(sessionId);
-        return response.data;
+        response = await apiService.getGuestCartDetails(sessionId);
       }
+      return response.data;
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -27,7 +42,7 @@ export const fetchCartDetails = createAsyncThunk(
 
 export const addToCartAsync = createAsyncThunk(
   'cart/addToCart',
-  async ({ productId, quantity = 1, size, color, selectedImage, fromWishlist = false }, { rejectWithValue }) => {
+  async ({ productId, quantity = 1, size, color, selectedImage, fromWishlist = false }, { rejectWithValue, dispatch }) => {
     try {
       if (!productId) {
         throw new Error('Product ID is required');
@@ -47,14 +62,28 @@ export const addToCartAsync = createAsyncThunk(
       
       let response;
       
-      // Call smartAddToCart with parameters in correct order
-      response = await apiService.smartAddToCart(
-        productId,        // 1st parameter: productId
-        quantity,         // 2nd parameter: quantity
-        size,            // 3rd parameter: size
-        color,           // 4th parameter: color object
-        selectedImage    // 5th parameter: selectedImage
-      );
+      // Try smart add first
+      try {
+        response = await apiService.smartAddToCart(
+          productId,        
+          quantity,         
+          size,            
+          color,           
+          selectedImage    
+        );
+      } catch (apiError) {
+        if (apiError.message?.includes('401') || 
+            apiError.message?.includes('unauthorized') || 
+            apiError.message?.includes('token') ||
+            apiError.message?.includes('expired')) {
+          // Clear auth and retry as guest
+          dispatch(logout());
+          const sessionId = apiService.getSessionId();
+          response = await apiService.addToGuestCart(sessionId, productId, quantity, size, color, selectedImage);
+        } else {
+          throw apiError;
+        }
+      }
 
       console.log('=== Cart API Response ===');
       console.log('Response:', response);
@@ -72,9 +101,27 @@ export const addToCartAsync = createAsyncThunk(
 // Update cart item (automatically handles guest/authenticated users)
 export const updateCartItemAsync = createAsyncThunk(
   'cart/updateCartItemAsync',
-  async ({ itemId, quantity, size, color = {}, selectedImage = '' }, { rejectWithValue }) => {
+  async ({ itemId, quantity, size, color = {}, selectedImage = '' }, { rejectWithValue, dispatch }) => {
     try {
-      const response = await apiService.smartUpdateCartItem(itemId, quantity, size, color, selectedImage);
+      let response;
+      
+      // Try smart update first
+      try {
+        response = await apiService.smartUpdateCartItem(itemId, quantity, size, color, selectedImage);
+      } catch (apiError) {
+        if (apiError.message?.includes('401') || 
+            apiError.message?.includes('unauthorized') || 
+            apiError.message?.includes('token') ||
+            apiError.message?.includes('expired')) {
+          // Clear auth - note: cannot reliably update specific item after switch, so just clear and reject
+          // UI should refetch cart
+          dispatch(logout());
+          throw new Error('Session expired. Please review your cart.');
+        } else {
+          throw apiError;
+        }
+      }
+      
       return response.data;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -85,9 +132,27 @@ export const updateCartItemAsync = createAsyncThunk(
 // Remove from cart (automatically handles guest/authenticated users)
 export const removeFromCartAsync = createAsyncThunk(
   'cart/removeFromCartAsync',
-  async ({ productId, size, colorName }, { rejectWithValue }) => {
+  async ({ productId, size, colorName }, { rejectWithValue, dispatch }) => {
     try {
-      const response = await apiService.smartRemoveFromCart(productId, size, colorName);
+      let response;
+      
+      // Try smart remove first
+      try {
+        response = await apiService.smartRemoveFromCart(productId, size, colorName);
+      } catch (apiError) {
+        if (apiError.message?.includes('401') || 
+            apiError.message?.includes('unauthorized') || 
+            apiError.message?.includes('token') ||
+            apiError.message?.includes('expired')) {
+          // Clear auth - note: cannot reliably remove specific item after switch, so just clear and reject
+          // UI should refetch cart
+          dispatch(logout());
+          throw new Error('Session expired. Please review your cart.');
+        } else {
+          throw apiError;
+        }
+      }
+      
       return { productId, size, colorName, response: response.data };
     } catch (error) {
       return rejectWithValue(error.message);
@@ -98,9 +163,27 @@ export const removeFromCartAsync = createAsyncThunk(
 // Clear cart (automatically handles guest/authenticated users)
 export const clearCartAsync = createAsyncThunk(
   'cart/clearCartAsync',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, dispatch }) => {
     try {
-      const response = await apiService.smartClearCart();
+      let response;
+      
+      // Try smart clear first
+      try {
+        response = await apiService.smartClearCart();
+      } catch (apiError) {
+        if (apiError.message?.includes('401') || 
+            apiError.message?.includes('unauthorized') || 
+            apiError.message?.includes('token') ||
+            apiError.message?.includes('expired')) {
+          // Clear auth and clear local/guest
+          dispatch(logout());
+          localStorage.removeItem('guestSessionId'); // Clear any guest session too
+          return { data: { items: [] } }; // Simulate success
+        } else {
+          throw apiError;
+        }
+      }
+      
       return response.data;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -108,12 +191,27 @@ export const clearCartAsync = createAsyncThunk(
   }
 );
 
-// Validate cart (only for authenticated users)
+// Validate cart (only for authenticated users) - on 401, clear auth
 export const validateCartAsync = createAsyncThunk(
   'cart/validateCartAsync',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, dispatch }) => {
     try {
-      const response = await apiService.validateCart();
+      let response;
+      
+      try {
+        response = await apiService.validateCart();
+      } catch (apiError) {
+        if (apiError.message?.includes('401') || 
+            apiError.message?.includes('unauthorized') || 
+            apiError.message?.includes('token') ||
+            apiError.message?.includes('expired')) {
+          dispatch(logout());
+          throw new Error('Session expired. Cart validation unavailable.');
+        } else {
+          throw apiError;
+        }
+      }
+      
       return response.data;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -137,12 +235,27 @@ export const mergeCartAsync = createAsyncThunk(
   }
 );
 
-// Apply discount (only for authenticated users)
+// Apply discount (only for authenticated users) - on 401, clear auth
 export const applyDiscountAsync = createAsyncThunk(
   'cart/applyDiscountAsync',
-  async ({ code, type = 'coupon' }, { rejectWithValue }) => {
+  async ({ code, type = 'coupon' }, { rejectWithValue, dispatch }) => {
     try {
-      const response = await apiService.applyDiscount(code, type);
+      let response;
+      
+      try {
+        response = await apiService.applyDiscount(code, type);
+      } catch (apiError) {
+        if (apiError.message?.includes('401') || 
+            apiError.message?.includes('unauthorized') || 
+            apiError.message?.includes('token') ||
+            apiError.message?.includes('expired')) {
+          dispatch(logout());
+          throw new Error('Session expired. Discount unavailable.');
+        } else {
+          throw apiError;
+        }
+      }
+      
       return response.data;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -150,12 +263,28 @@ export const applyDiscountAsync = createAsyncThunk(
   }
 );
 
-// Remove discount (only for authenticated users)
+// Remove discount (only for authenticated users) - on 401, clear auth
 export const removeDiscountAsync = createAsyncThunk(
   'cart/removeDiscountAsync',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, dispatch }) => {
     try {
-      const response = await apiService.removeDiscount();
+      let response;
+      
+      try {
+        response = await apiService.removeDiscount();
+      } catch (apiError) {
+        if (apiError.message?.includes('401') || 
+            apiError.message?.includes('unauthorized') || 
+            apiError.message?.includes('token') ||
+            apiError.message?.includes('expired')) {
+          dispatch(logout());
+          // Clear discount state locally
+          return { data: { discountAmount: 0 } };
+        } else {
+          throw apiError;
+        }
+      }
+      
       return response.data;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -179,9 +308,24 @@ export const getDiscountByCodeAsync = createAsyncThunk(
 // Validate discount usage
 export const validateDiscountAsync = createAsyncThunk(
   'cart/validateDiscountAsync',
-  async ({ code, productIds }, { rejectWithValue }) => {
+  async ({ code, productIds }, { rejectWithValue, dispatch }) => {
     try {
-      const response = await apiService.validateDiscount(code, productIds);
+      let response;
+      
+      try {
+        response = await apiService.validateDiscount(code, productIds);
+      } catch (apiError) {
+        if (apiError.message?.includes('401') || 
+            apiError.message?.includes('unauthorized') || 
+            apiError.message?.includes('token') ||
+            apiError.message?.includes('expired')) {
+          dispatch(logout());
+          throw new Error('Session expired. Discount validation unavailable.');
+        } else {
+          throw apiError;
+        }
+      }
+      
       return response.data;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -296,78 +440,33 @@ const cartSlice = createSlice({
         item => `${item.product._id}_${item.size}_${item.color?.colorName || ''}` !== itemKey
       );
 
-      // Also remove from API items
-      state.apiItems = state.apiItems.filter(
-        item => `${item.product._id}_${item.size}_${item.color?.colorName || ''}` !== itemKey
-      );
-
-      // Recalculate totals
+      // Recalculate local totals
       state.totalItems = state.items.reduce((total, item) => total + item.quantity, 0);
       state.totalPrice = state.items.reduce((total, item) => total + (item.itemTotal || item.product.price * item.quantity), 0);
-      
-      // Update API totals
-      if (state.totals) {
-        state.totals.itemCount = state.totalItems;
-        state.totals.subtotal = state.totalPrice;
-        state.totals.total = state.totalPrice - (state.totals.discountAmount || 0);
-      }
     },
-    
+
     updateQuantity: (state, action) => {
       const { itemId, quantity } = action.payload;
-      
       const itemIndex = state.items.findIndex(item => item._id === itemId);
-
-      if (itemIndex >= 0) {
-        if (quantity <= 0) {
-          state.items.splice(itemIndex, 1);
-        } else {
-          state.items[itemIndex].quantity = quantity;
-          state.items[itemIndex].itemTotal = state.items[itemIndex].product.price * quantity;
-        }
-
-        // Update API items as well
-        const apiItemIndex = state.apiItems.findIndex(item => item._id === itemId);
-        if (apiItemIndex >= 0) {
-          if (quantity <= 0) {
-            state.apiItems.splice(apiItemIndex, 1);
-          } else {
-            state.apiItems[apiItemIndex].quantity = quantity;
-            state.apiItems[apiItemIndex].itemTotal = state.apiItems[apiItemIndex].product.price * quantity;
-          }
-        }
-
-        // Recalculate totals
-        state.totalItems = state.items.reduce((total, item) => total + item.quantity, 0);
-        state.totalPrice = state.items.reduce((total, item) => total + (item.itemTotal || item.product.price * item.quantity), 0);
-        
-        // Update API totals
-        if (state.totals) {
-          state.totals.itemCount = state.totalItems;
-          state.totals.subtotal = state.totalPrice;
-          state.totals.total = state.totalPrice - (state.totals.discountAmount || 0);
-        }
+      
+      if (itemIndex >= 0 && quantity > 0) {
+        state.items[itemIndex].quantity = quantity;
+        state.items[itemIndex].itemTotal = state.items[itemIndex].product.price * quantity;
+      } else if (itemIndex >= 0 && quantity <= 0) {
+        state.items.splice(itemIndex, 1);
       }
+
+      // Recalculate local totals
+      state.totalItems = state.items.reduce((total, item) => total + item.quantity, 0);
+      state.totalPrice = state.items.reduce((total, item) => total + (item.itemTotal || item.product.price * item.quantity), 0);
     },
-    
+
     clearCart: (state) => {
       state.items = [];
       state.totalItems = 0;
       state.totalPrice = 0;
-      state.apiItems = [];
-      state.cartDetails = null;
-      state.cart = null;
-      state.totals = {
-        subtotal: 0,
-        discountAmount: 0,
-        total: 0,
-        itemCount: 0
-      };
-      state.hasDiscount = false;
-      state.appliedDiscount = null;
-      state.cartValidation = { valid: true, issues: [] };
     },
-    
+
     clearErrors: (state) => {
       state.error = null;
       state.addError = null;
@@ -378,55 +477,53 @@ const cartSlice = createSlice({
       state.mergeError = null;
       state.discountError = null;
     },
-    
-    // Sync local cart with API cart
+
     syncWithApiCart: (state, action) => {
       const { items, totals, cart } = action.payload;
       
-      if (items && Array.isArray(items)) {
-        // Transform API items to local format
-        state.items = items.map(item => ({
-          _id: item._id,
-          product: {
-            ...item.product,
-            _id: item.product._id,
-          },
-          size: item.size,
-          quantity: item.quantity,
-          color: item.color || {},
-          selectedImage: item.selectedImage || '',
-          addedAt: item.addedAt,
-          itemTotal: item.itemTotal
-        }));
-        state.apiItems = [...items];
-      }
+      state.apiItems = items || [];
+      state.items = (items || []).map(item => ({
+        _id: item._id,
+        product: item.product,
+        size: item.size,
+        quantity: item.quantity,
+        color: item.color || {},
+        selectedImage: item.selectedImage || '',
+        addedAt: item.addedAt,
+        itemTotal: item.itemTotal || (item.product.price * item.quantity)
+      }));
       
       if (totals) {
         state.totals = totals;
-        state.totalItems = totals.itemCount;
-        state.totalPrice = totals.total;
       }
       
       if (cart) {
         state.cart = cart;
-        state.hasDiscount = !!(cart.appliedCoupon?.code || cart.appliedVoucher?.code);
-        state.appliedDiscount = cart.appliedCoupon || cart.appliedVoucher || null;
+        state.cartDetails = cart;
+      }
+      
+      state.totalItems = totals?.itemCount || state.items.reduce((total, item) => total + item.quantity, 0);
+      state.totalPrice = totals?.total || state.items.reduce((total, item) => total + (item.itemTotal || item.product.price * item.quantity), 0);
+      state.hasDiscount = (totals?.discountAmount || 0) > 0;
+      
+      // Set discount info from cart
+      if (cart?.appliedCoupon?.code) {
+        state.appliedDiscount = cart.appliedCoupon;
+      } else if (cart?.appliedVoucher?.code) {
+        state.appliedDiscount = cart.appliedVoucher;
       }
     },
 
-    // Set discount state
     setDiscountState: (state, action) => {
       const { hasDiscount, appliedDiscount } = action.payload;
       state.hasDiscount = hasDiscount;
       state.appliedDiscount = appliedDiscount;
     },
 
-    // Set validation state
     setValidationState: (state, action) => {
       state.cartValidation = action.payload;
     }
   },
-  
   extraReducers: (builder) => {
     builder
       // Fetch cart details
@@ -436,36 +533,27 @@ const cartSlice = createSlice({
       })
       .addCase(fetchCartDetails.fulfilled, (state, action) => {
         state.loading = false;
-        const { cart, items, totals } = action.payload;
+        const { items, totals, cart } = action.payload;
         
-        state.cartDetails = action.payload;
-        state.cart = cart;
         state.apiItems = items || [];
-        state.totals = totals || {
-          subtotal: 0,
-          discountAmount: 0,
-          total: 0,
-          itemCount: 0
-        };
+        state.items = (items || []).map(item => ({
+          _id: item._id,
+          product: item.product,
+          size: item.size,
+          quantity: item.quantity,
+          color: item.color || {},
+          selectedImage: item.selectedImage || '',
+          addedAt: item.addedAt,
+          itemTotal: item.itemTotal || (item.product.price * item.quantity)
+        }));
         
-        // Update authentication status
-        state.isAuthenticated = !!localStorage.getItem('token');
+        if (totals) {
+          state.totals = totals;
+        }
         
-        // Sync with local cart
-        if (items && Array.isArray(items)) {
-          state.items = items.map(item => ({
-            _id: item._id,
-            product: {
-              ...item.product,
-              _id: item.product._id,
-            },
-            size: item.size,
-            quantity: item.quantity,
-            color: item.color || {},
-            selectedImage: item.selectedImage || '',
-            addedAt: item.addedAt,
-            itemTotal: item.itemTotal || (item.product.price * item.quantity)
-          }));
+        if (cart) {
+          state.cart = cart;
+          state.cartDetails = cart;
         }
         
         state.totalItems = totals?.itemCount || 0;
@@ -484,7 +572,7 @@ const cartSlice = createSlice({
         state.error = action.payload;
         
         // For guest users, don't treat empty cart as error
-        if (!state.isAuthenticated && action.payload.includes('not found')) {
+        if (!state.isAuthenticated && action.payload?.includes('not found')) {
           state.error = null;
         }
       })
@@ -496,8 +584,8 @@ const cartSlice = createSlice({
       })
       .addCase(addToCartAsync.fulfilled, (state, action) => {
         state.addingToCart = false;
-        // The local state is already updated by the addToCart action
-        // We can optionally refresh cart details here
+        // Optionally refresh cart details or sync
+        // dispatch(fetchCartDetails());
       })
       .addCase(addToCartAsync.rejected, (state, action) => {
         state.addingToCart = false;
@@ -511,7 +599,8 @@ const cartSlice = createSlice({
       })
       .addCase(updateCartItemAsync.fulfilled, (state, action) => {
         state.updatingCart = false;
-        // The local state is already updated by the updateQuantity action
+        // Sync updated item or refetch
+        // dispatch(fetchCartDetails());
       })
       .addCase(updateCartItemAsync.rejected, (state, action) => {
         state.updatingCart = false;
@@ -525,7 +614,8 @@ const cartSlice = createSlice({
       })
       .addCase(removeFromCartAsync.fulfilled, (state, action) => {
         state.removingFromCart = false;
-        // The local state is already updated by the removeFromCart action
+        // Sync or refetch
+        // dispatch(fetchCartDetails());
       })
       .addCase(removeFromCartAsync.rejected, (state, action) => {
         state.removingFromCart = false;
@@ -598,7 +688,7 @@ const cartSlice = createSlice({
         state.mergeError = action.payload;
       })
 
-      // Apply discount (only available for authenticated users)
+      // Apply discount
       .addCase(applyDiscountAsync.pending, (state) => {
         state.applyingDiscount = true;
         state.discountError = null;
@@ -638,7 +728,7 @@ const cartSlice = createSlice({
         state.discountError = action.payload;
       })
 
-      // Remove discount (only available for authenticated users)
+      // Remove discount
       .addCase(removeDiscountAsync.pending, (state) => {
         state.removingDiscount = true;
         state.discountError = null;
@@ -650,8 +740,8 @@ const cartSlice = createSlice({
         
         // Reset discount in cart
         if (state.cart) {
-          state.cart.appliedCoupon = {};
-          state.cart.appliedVoucher = {};
+          state.cart.appliedCoupon = null;
+          state.cart.appliedVoucher = null;
         }
         
         // Update totals without discount
