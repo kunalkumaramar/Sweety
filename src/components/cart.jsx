@@ -1,26 +1,26 @@
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector, useDispatch } from "react-redux";
 import { useCart } from "../hooks/useCart";
 import { useWishlist } from "./WishlistContext";
-import { apiService } from '../services/api';
 import { useNavigate } from "react-router-dom";
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import SignIn from "../pages/SignIn";
-import Notification from './Notification';
-import { validateDiscountAsync, applyDiscountAsync, removeDiscountAsync } from '../Redux/slices/cartSlice';
-  
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+import Notification from "./Notification";
+import {
+  validateDiscountAsync,
+  applyDiscountAsync,
+  removeDiscountAsync,
+} from "../Redux/slices/cartSlice";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ⭐ Enhanced Reusable Cart Item Component
-const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars }) => {
+const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist }) => {
   const itemRef = useRef(null);
   const quantityRef = useRef(null);
   const navigate = useNavigate();
 
-  
-
   useEffect(() => {
-
     const element = itemRef.current;
 
     const handleMouseEnter = () => {
@@ -101,7 +101,9 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars
   const handleShare = async () => {
     const shareData = {
       title: item.product?.name || item.name,
-      text: `Check out this amazing product: ${item.product?.name || item.name}`,
+      text: `Check out this amazing product: ${
+        item.product?.name || item.name
+      }`,
       url: `${window.location.origin}/product/${item.product?._id || item._id}`,
     };
 
@@ -119,13 +121,15 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars
 
   // FIXED: Better price calculation with proper fallbacks
   const currentPrice = item.product?.price || item.price || 0;
-  const originalPrice = item.product?.originalPrice || (currentPrice > 0 ? currentPrice * 1.2 : 0);
-  const discount = originalPrice > 0 && currentPrice > 0 
-    ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
-    : 0;
+  const originalPrice =
+    item.product?.originalPrice || (currentPrice > 0 ? currentPrice * 1.2 : 0);
+  const discount =
+    originalPrice > 0 && currentPrice > 0
+      ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
+      : 0;
 
   // Get proper item total - use server-calculated value or calculate locally
-  const itemTotal = item.itemTotal || (currentPrice * (item.quantity || 1));
+  const itemTotal = item.itemTotal || currentPrice * (item.quantity || 1);
 
   return (
     <div
@@ -153,9 +157,9 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars
           <div className="flex gap-2 mb-2">
             {item.color?.colorName && (
               <span className="text-xs bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
-                <div 
-                  className="w-3 h-3 rounded-full border" 
-                  style={{ backgroundColor: item.color.colorHex || '#000' }}
+                <div
+                  className="w-3 h-3 rounded-full border"
+                  style={{ backgroundColor: item.color.colorHex || "#000" }}
                 ></div>
                 {item.color.colorName}
               </span>
@@ -176,7 +180,7 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars
           )}
           <div className="flex items-center gap-2">
             <div className="text-lg font-semibold text-gray-800">
-              ₹{currentPrice > 0 ? currentPrice.toLocaleString() : '0'}
+              ₹{currentPrice > 0 ? currentPrice.toLocaleString() : "0"}
             </div>
             {originalPrice > currentPrice && (
               <div className="text-sm text-gray-500 line-through">
@@ -185,7 +189,6 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars
             )}
           </div>
         </div>
-
 
         {/* Quantity + Actions */}
         <div className="flex items-center gap-3 mb-4">
@@ -213,7 +216,10 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars
 
           <div className="flex gap-2 text-xs">
             <span className="text-gray-300">|</span>
-            <button className="text-pink-600 hover:underline" onClick={handleShare}>
+            <button
+              className="text-pink-600 hover:underline"
+              onClick={handleShare}
+            >
               Share
             </button>
           </div>
@@ -236,15 +242,15 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars
           >
             {item.product?.name || item.name}
           </div>
-          
+
           {/* Color and Size */}
           {(item.color?.colorName || item.size) && (
             <div className="flex gap-2 mb-2">
               {item.color?.colorName && (
                 <span className="text-xs bg-gray-100 px-2 py-1 rounded flex items-center gap-1">
-                  <div 
-                    className="w-3 h-3 rounded-full border" 
-                    style={{ backgroundColor: item.color.colorHex || '#000' }}
+                  <div
+                    className="w-3 h-3 rounded-full border"
+                    style={{ backgroundColor: item.color.colorHex || "#000" }}
                   ></div>
                   {item.color.colorName}
                 </span>
@@ -282,7 +288,10 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars
 
             <div className="flex gap-2 text-xs">
               <span className="text-gray-300">|</span>
-              <button className="text-pink-600 hover:underline" onClick={handleShare}>
+              <button
+                className="text-pink-600 hover:underline"
+                onClick={handleShare}
+              >
                 Share
               </button>
             </div>
@@ -297,7 +306,7 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars
             </div>
           )}
           <div className="text-lg font-semibold text-gray-800">
-            ₹{currentPrice > 0 ? currentPrice.toLocaleString() : '0'}
+            ₹{currentPrice > 0 ? currentPrice.toLocaleString() : "0"}
           </div>
           {originalPrice > currentPrice && (
             <div className="text-sm text-gray-500 line-through mt-1">
@@ -314,7 +323,7 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist, renderStars
 };
 
 // ⭐ Deal Item Component with better product filtering
-const DealItem = ({ deal, addToCart, renderStars }) => {
+const DealItem = ({ deal, addToCart }) => {
   const itemRef = useRef(null);
   const navigate = useNavigate();
 
@@ -325,7 +334,7 @@ const DealItem = ({ deal, addToCart, renderStars }) => {
     if (button) {
       gsap.to(button, { scale: 0.95, duration: 0.1, yoyo: true, repeat: 1 });
     }
-    
+
     // Transform deal object to match expected format
     const dealData = {
       id: deal._id || deal.id,
@@ -336,22 +345,32 @@ const DealItem = ({ deal, addToCart, renderStars }) => {
       images: deal.images || [],
       colors: deal.colors || [],
     };
-    
+
     // Use default color and size
-    const defaultColor = deal.colors?.[0]?.colorName || '';
-    const defaultSize = deal.colors?.[0]?.sizeStock?.[0]?.size || 'M';
-    const defaultImage = deal.colors?.[0]?.images?.[0] || deal.images?.[0] || '';
-    
+    const defaultColor = deal.colors?.[0]?.colorName || "";
+    const defaultSize = deal.colors?.[0]?.sizeStock?.[0]?.size || "M";
+    const defaultImage =
+      deal.colors?.[0]?.images?.[0] || deal.images?.[0] || "";
+
     await addToCart(dealData, 1, defaultColor, defaultSize, defaultImage);
   };
 
   const originalPrice = deal.originalPrice || deal.price * 1.2;
-  const discount = Math.round(((originalPrice - deal.price) / originalPrice) * 100);
+  const discount = Math.round(
+    ((originalPrice - deal.price) / originalPrice) * 100
+  );
 
   return (
-    <div ref={itemRef} className="flex gap-3 py-3 border-b border-gray-200 last:border-b-0">
+    <div
+      ref={itemRef}
+      className="flex gap-3 py-3 border-b border-gray-200 last:border-b-0"
+    >
       <img
-        src={deal.colors?.[0]?.images?.[0] || deal.images?.[0] || '/placeholder-image.jpg'}
+        src={
+          deal.colors?.[0]?.images?.[0] ||
+          deal.images?.[0] ||
+          "/placeholder-image.jpg"
+        }
         alt={deal.name}
         className="w-16 h-16 sm:w-20 sm:h-20 rounded-md object-cover cursor-pointer"
         onClick={goToDetail}
@@ -365,8 +384,12 @@ const DealItem = ({ deal, addToCart, renderStars }) => {
           {deal.name}
         </div>
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-pink-600 text-xs font-semibold">-{discount}%</span>
-          <span className="text-sm font-semibold text-gray-800">₹{deal.price.toLocaleString()}</span>
+          <span className="text-pink-600 text-xs font-semibold">
+            -{discount}%
+          </span>
+          <span className="text-sm font-semibold text-gray-800">
+            ₹{deal.price.toLocaleString()}
+          </span>
         </div>
       </div>
     </div>
@@ -374,32 +397,38 @@ const DealItem = ({ deal, addToCart, renderStars }) => {
 };
 
 // ⭐ Enhanced Coupon Component with better error handling
-const CouponSection = ({ onApplyDiscount, onRemoveDiscount, hasDiscount, appliedDiscount, loading }) => {
-  const [couponCode, setCouponCode] = useState('');
+const CouponSection = ({
+  onApplyDiscount,
+  onRemoveDiscount,
+  hasDiscount,
+  appliedDiscount,
+  loading,
+}) => {
+  const [couponCode, setCouponCode] = useState("");
   const [showCouponInput, setShowCouponInput] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
-      setError('Please enter a coupon code');
+      setError("Please enter a coupon code");
       return;
     }
-    
-    setError('');
+
+    setError("");
     const result = await onApplyDiscount(couponCode.trim());
     if (result.success) {
-      setCouponCode('');
+      setCouponCode("");
       setShowCouponInput(false);
     } else {
-      setError(result.error || 'Failed to apply coupon');
+      setError(result.error || "Failed to apply coupon");
     }
   };
 
   const handleRemoveDiscount = async () => {
-    setError('');
+    setError("");
     const result = await onRemoveDiscount();
     if (!result.success) {
-      setError(result.error || 'Failed to remove discount');
+      setError(result.error || "Failed to remove discount");
     }
   };
 
@@ -407,9 +436,12 @@ const CouponSection = ({ onApplyDiscount, onRemoveDiscount, hasDiscount, applied
     return (
       <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
         <div className="flex flex-col">
-          <span className="text-green-600 text-sm font-medium">✓ Discount Applied</span>
+          <span className="text-green-600 text-sm font-medium">
+            ✓ Discount Applied
+          </span>
           <span className="text-green-700 text-xs">
-            {appliedDiscount.code} - ₹{(appliedDiscount.discountAmount || 0).toLocaleString()} off
+            {appliedDiscount.code} - ₹
+            {(appliedDiscount.discountAmount || 0).toLocaleString()} off
           </span>
         </div>
         <button
@@ -430,12 +462,12 @@ const CouponSection = ({ onApplyDiscount, onRemoveDiscount, hasDiscount, applied
           {error}
         </div>
       )}
-      
+
       {!showCouponInput ? (
         <button
           onClick={() => {
             setShowCouponInput(true);
-            setError('');
+            setError("");
           }}
           className="w-full bg-white border border-pink-300 text-pink-600 py-3 rounded-3xl text-sm font-semibold hover:bg-pink-50 transition-colors"
         >
@@ -448,24 +480,24 @@ const CouponSection = ({ onApplyDiscount, onRemoveDiscount, hasDiscount, applied
             value={couponCode}
             onChange={(e) => {
               setCouponCode(e.target.value);
-              setError('');
+              setError("");
             }}
             placeholder="Enter coupon code"
             className="flex-1 px-3 py-2 border border-pink-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-200"
-            onKeyPress={(e) => e.key === 'Enter' && handleApplyCoupon()}
+            onKeyPress={(e) => e.key === "Enter" && handleApplyCoupon()}
           />
           <button
             onClick={handleApplyCoupon}
             disabled={!couponCode.trim() || loading}
             className="bg-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Applying...' : 'Apply'}
+            {loading ? "Applying..." : "Apply"}
           </button>
           <button
             onClick={() => {
               setShowCouponInput(false);
-              setCouponCode('');
-              setError('');
+              setCouponCode("");
+              setError("");
             }}
             className="text-gray-500 px-2 hover:text-gray-700"
           >
@@ -480,16 +512,16 @@ const CouponSection = ({ onApplyDiscount, onRemoveDiscount, hasDiscount, applied
 // Main Cart Component
 const Cart = () => {
   const dispatch = useDispatch();
-  const [discountCode, setDiscountCode] = useState('');
+  const [discountCode, setDiscountCode] = useState("");
   const [notification, setNotification] = useState(null);
   const navigate = useNavigate();
   const [showSignIn, setShowSignIn] = useState(false);
   const auth = useSelector((state) => state.auth);
- // Get cart items from Redux
+  // Get cart items from Redux
   const { items } = useSelector((state) => state.cart);
 
-  const { 
-    items: cartItems, 
+  const {
+    items: cartItems,
     totals,
     totalItems,
     totalPrice,
@@ -504,20 +536,20 @@ const Cart = () => {
     removingDiscount,
     clearCartItems,
     loading,
-    isAuthenticated
+    isAuthenticated,
   } = useCart();
 
   const handleProceedToBuy = async () => {
     if (!cartItems.length) return;
-    
-    const token = localStorage.getItem('token');
+
+    const token = localStorage.getItem("token");
     if (!token || !auth.isAuthenticated) {
       setShowSignIn(true);
     } else {
-      navigate('/checkout');
+      navigate("/checkout");
     }
   };
-  
+
   const { addToWishlist } = useWishlist();
   const containerRef = useRef(null);
   const [deals, setDeals] = useState([]);
@@ -525,7 +557,7 @@ const Cart = () => {
   const [dealsLoading, setDealsLoading] = useState(false);
 
   const renderStars = (rating) => "★".repeat(Math.floor(rating));
-  
+
   // Use totals from API with proper fallbacks
   const getTotalItems = () => {
     if (totals?.itemCount >= 0) return totals.itemCount;
@@ -538,7 +570,7 @@ const Cart = () => {
     return cartItems.reduce((total, item) => {
       const price = item.product?.price || item.price || 0;
       const quantity = item.quantity || 0;
-      const itemTotal = item.itemTotal || (price * quantity);
+      const itemTotal = item.itemTotal || price * quantity;
       return total + itemTotal;
     }, 0);
   };
@@ -553,75 +585,77 @@ const Cart = () => {
   // Fetch popular deals from API, excluding items already in cart
   useEffect(() => {
     const fetchDeals = async () => {
-  try {
-    setDealsLoading(true);
-    
-    // Fetch categories
-    const categoriesRes = await fetch(`${API_BASE_URL}/category`);
-    const categoriesData = await categoriesRes.json();
-    const categories = categoriesData.data || [];
+      try {
+        setDealsLoading(true);
 
-    const products = [];
+        // Fetch categories
+        const categoriesRes = await fetch(`${API_BASE_URL}/category`);
+        const categoriesData = await categoriesRes.json();
+        const categories = categoriesData.data || [];
 
-    for (const category of categories) {
-      // Fetch subcategories
-      const subcategoriesRes = await fetch(`${API_BASE_URL}/sub-category/category/${category._id}`);
-      const subcategoriesData = await subcategoriesRes.json();
-      const subcategories = subcategoriesData.data || [];
+        const products = [];
 
-      if (subcategories.length > 0) {
-        // Fetch one product from each subcategory
-        for (const subcategory of subcategories) {
-          const productsRes = await fetch(
-            `${API_BASE_URL}/product/subcategory/${subcategory._id}?page=1&limit=1&isActive=true`
+        for (const category of categories) {
+          // Fetch subcategories
+          const subcategoriesRes = await fetch(
+            `${API_BASE_URL}/sub-category/category/${category._id}`
           );
-          const productsData = await productsRes.json();
-          const latestProduct = productsData.data?.products?.[0];
-          
-          if (latestProduct) {
-            products.push({
-              ...latestProduct,
-              categoryName: category.name,
-              subcategoryName: subcategory.name
-            });
+          const subcategoriesData = await subcategoriesRes.json();
+          const subcategories = subcategoriesData.data || [];
+
+          if (subcategories.length > 0) {
+            // Fetch one product from each subcategory
+            for (const subcategory of subcategories) {
+              const productsRes = await fetch(
+                `${API_BASE_URL}/product/subcategory/${subcategory._id}?page=1&limit=1&isActive=true`
+              );
+              const productsData = await productsRes.json();
+              const latestProduct = productsData.data?.products?.[0];
+
+              if (latestProduct) {
+                products.push({
+                  ...latestProduct,
+                  categoryName: category.name,
+                  subcategoryName: subcategory.name,
+                });
+              }
+            }
+          } else {
+            // No subcategories - fetch directly from category
+            const productsRes = await fetch(
+              `${API_BASE_URL}/product/category/${category._id}?page=1&limit=1&isActive=true`
+            );
+            const productsData = await productsRes.json();
+            const latestProduct = productsData.data?.products?.[0];
+
+            if (latestProduct) {
+              products.push({
+                ...latestProduct,
+                categoryName: category.name,
+                subcategoryName: null,
+              });
+            }
           }
         }
-      } else {
-        // No subcategories - fetch directly from category
-        const productsRes = await fetch(
-          `${API_BASE_URL}/product/category/${category._id}?page=1&limit=1&isActive=true`
-        );
-        const productsData = await productsRes.json();
-        const latestProduct = productsData.data?.products?.[0];
-        
-        if (latestProduct) {
-          products.push({
-            ...latestProduct,
-            categoryName: category.name,
-            subcategoryName: null
-          });
-        }
-      }
-    }
 
-    setRawDeals(products);
-  } catch (error) {
-    console.error('Failed to fetch deals:', error);
-    setRawDeals([]);
-  } finally {
-    setDealsLoading(false);
-  }
-};
-  
+        setRawDeals(products);
+      } catch (error) {
+        console.error("Failed to fetch deals:", error);
+        setRawDeals([]);
+      } finally {
+        setDealsLoading(false);
+      }
+    };
+
     // Only fetch if we have cart items loaded
     if (!loading) {
-      const cacheKey = 'cart_raw_deals';
+      const cacheKey = "cart_raw_deals";
       const cached = localStorage.getItem(cacheKey);
       const cacheTime = localStorage.getItem(`${cacheKey}_time`);
       const now = Date.now();
       const cacheExpiry = 3600000; // 1 hour
 
-      if (cached && cacheTime && (now - parseInt(cacheTime)) < cacheExpiry) {
+      if (cached && cacheTime && now - parseInt(cacheTime) < cacheExpiry) {
         setRawDeals(JSON.parse(cached));
         setDealsLoading(false);
       } else {
@@ -636,11 +670,13 @@ const Cart = () => {
       return;
     }
 
-    const cacheKey = 'cart_raw_deals';
+    const cacheKey = "cart_raw_deals";
     // Filter out cart items and limit to 6
-    const cartProductIds = cartItems.map(item => item.product?._id || item.productId);
+    const cartProductIds = cartItems.map(
+      (item) => item.product?._id || item.productId
+    );
     const filteredProducts = rawDeals
-      .filter(product => !cartProductIds.includes(product._id))
+      .filter((product) => !cartProductIds.includes(product._id))
       .slice(0, 6);
 
     setDeals(filteredProducts);
@@ -651,77 +687,84 @@ const Cart = () => {
   }, [rawDeals, cartItems]);
 
   const handleApplyDiscount = async (code) => {
-  if (!code.trim()) {
-    showNotification('Please enter a discount code', 'error');
-    return { success: false, error: 'Please enter a discount code' };
-  }
-
-  try {
-    // Get all product IDs from cart
-    const productIds = items.map(item => item.product?._id || item.productId);
-    
-    // First validate if discount can be used
-    const validationResult = await dispatch(
-      validateDiscountAsync({ 
-        code: code.trim(), 
-        productIds 
-      })
-    ).unwrap();
-
-    // Check the nested canUse
-    if (!validationResult?.data?.canUse) {
-      const errorMessage = validationResult?.data?.message || 'Invalid discount code';
-      throw new Error(errorMessage);
+    if (!code.trim()) {
+      showNotification("Please enter a discount code", "error");
+      return { success: false, error: "Please enter a discount code" };
     }
 
-    // If validation passes (assuming canUse: true), apply the discount
-    const result = await dispatch(
-      applyDiscountAsync({ 
-        code: code.trim(), 
-        type: 'coupon' 
-      })
-    ).unwrap();
-    
-    const discountAmount = result.appliedCoupon?.discountAmount || 
-                          result.appliedVoucher?.discountAmount || 
-                          0;
-    
-    showNotification(
-      `Discount applied successfully! You saved ₹${discountAmount}`, 
-      'success'
-    );
-    return { success: true, result };
-  } catch (error) {
-    // Handle validation errors
-    const errorMessage = typeof error === 'string' ? error : error.message || '';
-    
-    if (errorMessage.toLowerCase().includes('already used')) {
-      showNotification('You have already used this discount code', 'error');
-    } else if (errorMessage.toLowerCase().includes('expired')) {
-      showNotification('This discount code has expired', 'error');
-    } else if (errorMessage.toLowerCase().includes('not found') || 
-               errorMessage.toLowerCase().includes('invalid')) {
-      showNotification('Invalid discount code', 'error');
-    } else {
-      showNotification(errorMessage || 'Failed to apply discount', 'error');
+    try {
+      // Get all product IDs from cart
+      const productIds = items.map(
+        (item) => item.product?._id || item.productId
+      );
+
+      // First validate if discount can be used
+      const validationResult = await dispatch(
+        validateDiscountAsync({
+          code: code.trim(),
+          productIds,
+        })
+      ).unwrap();
+
+      // Check the nested canUse
+      if (!validationResult?.data?.canUse) {
+        const errorMessage =
+          validationResult?.data?.message || "Invalid discount code";
+        throw new Error(errorMessage);
+      }
+
+      // If validation passes (assuming canUse: true), apply the discount
+      const result = await dispatch(
+        applyDiscountAsync({
+          code: code.trim(),
+          type: "coupon",
+        })
+      ).unwrap();
+
+      const discountAmount =
+        result.appliedCoupon?.discountAmount ||
+        result.appliedVoucher?.discountAmount ||
+        0;
+
+      showNotification(
+        `Discount applied successfully! You saved ₹${discountAmount}`,
+        "success"
+      );
+      return { success: true, result };
+    } catch (error) {
+      // Handle validation errors
+      const errorMessage =
+        typeof error === "string" ? error : error.message || "";
+
+      if (errorMessage.toLowerCase().includes("already used")) {
+        showNotification("You have already used this discount code", "error");
+      } else if (errorMessage.toLowerCase().includes("expired")) {
+        showNotification("This discount code has expired", "error");
+      } else if (
+        errorMessage.toLowerCase().includes("not found") ||
+        errorMessage.toLowerCase().includes("invalid")
+      ) {
+        showNotification("Invalid discount code", "error");
+      } else {
+        showNotification(errorMessage || "Failed to apply discount", "error");
+      }
+
+      return { success: false, error: errorMessage };
     }
-    
-    return { success: false, error: errorMessage };
-  }
-};
+  };
 
-   const handleRemoveDiscount = async () => {
-  try {
-    await dispatch(removeDiscountAsync()).unwrap();
-    showNotification('Discount removed successfully', 'info');
-    return { success: true };
-  } catch (error) {
-    const errorMessage = typeof error === 'string' ? error : error.message || '';
-    showNotification('Failed to remove discount', 'error');
-    return { success: false, error: errorMessage };
-  }
-};
-
+  const handleRemoveDiscount = async () => {
+    try {
+      await dispatch(removeDiscountAsync()).unwrap();
+      showNotification("Discount removed successfully", "info");
+      return { success: true };
+    } catch (error) {
+      const errorMessage =
+        typeof error === "string" ? error : error.message || "";
+      showNotification("Failed to remove discount", "error");
+      return { success: false, error: errorMessage };
+    }
+  };
 
   const showNotification = (message, type) => {
     setNotification({ message, type });
@@ -733,7 +776,11 @@ const Cart = () => {
 
   useEffect(() => {
     if (containerRef.current) {
-      gsap.fromTo(containerRef.current, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6 });
+      gsap.fromTo(
+        containerRef.current,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6 }
+      );
     }
   }, []);
 
@@ -752,33 +799,36 @@ const Cart = () => {
   return (
     <div className="bg-gray-100 min-h-screen">
       {/* Notification Component */}
-       {notification && (
-         <Notification
-           message={notification.message}
-           type={notification.type}
-           onClose={closeNotification}
-         />
-       )}
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={closeNotification}
+        />
+      )}
       {/* Mobile Layout */}
       <div className="lg:hidden p-3 pb-24" ref={containerRef}>
         {/* Auth Status Indicator */}
-            {!isAuthenticated && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                <div className="text-yellow-800 text-sm">
-                  <span className="font-medium">Guest Mode:</span> Your cart will be saved temporarily. 
-                  <button 
-                    onClick={() => setShowSignIn(true)} 
-                    className="underline ml-1 text-pink-600 hover:text-pink-700"
-                  >
-                    Login
-                  </button> 
-                  to save permanently.
-                </div>
-              </div>
-            )}        {/* Summary */}
+        {!isAuthenticated && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+            <div className="text-yellow-800 text-sm">
+              <span className="font-medium">Guest Mode:</span> Your cart will be
+              saved temporarily.
+              <button
+                onClick={() => setShowSignIn(true)}
+                className="underline ml-1 text-pink-600 hover:text-pink-700"
+              >
+                Login
+              </button>
+              to save permanently.
+            </div>
+          </div>
+        )}{" "}
+        {/* Summary */}
         <div className="bg-white rounded-xl p-4 shadow-lg mb-4">
           <div className="text-base font-semibold mb-2">
-            Subtotal ({getTotalItems()} items): ₹{getSubtotal().toLocaleString()}
+            Subtotal ({getTotalItems()} items): ₹
+            {getSubtotal().toLocaleString()}
           </div>
           {getDiscountAmount() > 0 && (
             <div className="text-sm text-green-600 mb-2">
@@ -789,35 +839,37 @@ const Cart = () => {
             Total: ₹{getTotalAmount().toLocaleString()}
           </div>
           <div className="flex flex-col gap-3">
-            <CouponSection 
+            <CouponSection
               onApplyDiscount={handleApplyDiscount}
               onRemoveDiscount={handleRemoveDiscount}
               hasDiscount={hasDiscount}
               appliedDiscount={appliedDiscount}
               loading={applyingDiscount || removingDiscount}
             />
-            <button 
+            <button
               onClick={handleProceedToBuy}
-              className="bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 disabled:opacity-50" 
+              className="bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 disabled:opacity-50"
               disabled={!cartItems.length}
             >
               Proceed to Buy ({getTotalItems()} items)
             </button>
-            
+
             {/* SignIn Modal */}
-            <SignIn 
-              isOpen={showSignIn} 
+            <SignIn
+              isOpen={showSignIn}
               onClose={() => setShowSignIn(false)}
               initialMode="login"
             />
           </div>
         </div>
-
         {/* Cart */}
         <div className="bg-white rounded-xl shadow-lg mb-4">
           <div className="flex justify-between items-center text-lg font-semibold p-4 border-b">
             <div className="flex items-center gap-2">
-              Shopping Cart <span className="text-gray-500 text-sm">({getTotalItems()} items)</span>
+              Shopping Cart{" "}
+              <span className="text-gray-500 text-sm">
+                ({getTotalItems()} items)
+              </span>
             </div>
             {cartItems.length > 0 && (
               <button
@@ -832,10 +884,14 @@ const Cart = () => {
             {cartItems.length === 0 ? (
               <div className="flex flex-col items-center text-center py-10">
                 <div className="text-4xl text-gray-300 mb-4">🛒</div>
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">Your cart is empty</h3>
-                <p className="text-gray-500 mb-6 text-sm">Add items to get started with your shopping</p>
-                <button 
-                  className="bg-pink-600 text-white py-3 px-6 rounded-2xl text-sm" 
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  Your cart is empty
+                </h3>
+                <p className="text-gray-500 mb-6 text-sm">
+                  Add items to get started with your shopping
+                </p>
+                <button
+                  className="bg-pink-600 text-white py-3 px-6 rounded-2xl text-sm"
                   onClick={() => (window.location.href = "/")}
                 >
                   Start Shopping
@@ -843,34 +899,39 @@ const Cart = () => {
               </div>
             ) : (
               cartItems.map((item) => (
-                <CartItem 
-                  key={item._id} 
-                  item={item} 
-                  updateQuantity={updateItemQuantity} 
-                  deleteItem={deleteItem} 
-                  addToWishlist={addToWishlist} 
-                  renderStars={renderStars} 
+                <CartItem
+                  key={item._id}
+                  item={item}
+                  updateQuantity={updateItemQuantity}
+                  deleteItem={deleteItem}
+                  addToWishlist={addToWishlist}
+                  renderStars={renderStars}
                 />
               ))
             )}
           </div>
         </div>
-
         {/* Deals */}
         <div className="bg-white rounded-xl shadow-lg">
-          <div className="text-lg font-semibold text-center p-4 border-b">Popular Deals</div>
+          <div className="text-lg font-semibold text-center p-4 border-b">
+            Popular Deals
+          </div>
           <div className="px-4 pb-4">
             {dealsLoading ? (
-              <div className="text-center py-8 text-gray-500">Loading deals...</div>
+              <div className="text-center py-8 text-gray-500">
+                Loading deals...
+              </div>
             ) : deals.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No deals available</div>
+              <div className="text-center py-8 text-gray-500">
+                No deals available
+              </div>
             ) : (
               deals.map((deal) => (
-                <DealItem 
-                  key={deal._id} 
-                  deal={deal} 
-                  addToCart={addItemToCart} 
-                  renderStars={renderStars} 
+                <DealItem
+                  key={deal._id}
+                  deal={deal}
+                  addToCart={addItemToCart}
+                  renderStars={renderStars}
                 />
               ))
             )}
@@ -881,20 +942,20 @@ const Cart = () => {
       {/* Desktop Layout */}
       <div className="hidden lg:block p-5" ref={containerRef}>
         <div className="max-w-7xl mx-auto flex gap-5 h-[calc(100vh-40px)]">
-          
           {/* Cart Section */}
           <div className="flex-1 bg-white rounded-xl shadow-lg flex flex-col">
             {/* Auth Status Indicator */}
             {!isAuthenticated && (
               <div className="bg-yellow-50 border-b border-yellow-200 p-3">
                 <div className="text-yellow-800 text-sm">
-                  <span className="font-medium">Guest Mode:</span> Your cart will be saved temporarily. 
-                  <button 
-                    onClick={() => setShowSignIn(true)} 
+                  <span className="font-medium">Guest Mode:</span> Your cart
+                  will be saved temporarily.
+                  <button
+                    onClick={() => setShowSignIn(true)}
                     className="underline ml-1 text-pink-600 hover:text-pink-700"
                   >
                     Login
-                  </button> 
+                  </button>
                   to save permanently.
                 </div>
               </div>
@@ -902,7 +963,10 @@ const Cart = () => {
 
             <div className="flex justify-between items-center text-xl font-semibold p-5 border-b">
               <div className="flex items-center gap-2">
-                Shopping Cart <span className="text-gray-500 text-base">({getTotalItems()} items)</span>
+                Shopping Cart{" "}
+                <span className="text-gray-500 text-base">
+                  ({getTotalItems()} items)
+                </span>
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-gray-500 text-base">Price</span>
@@ -920,8 +984,12 @@ const Cart = () => {
               {cartItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center py-20">
                   <div className="text-6xl text-gray-300 mb-4">🛒</div>
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">Your cart is empty</h3>
-                  <p className="text-gray-500 mb-6">Add items to get started with your shopping</p>
+                  <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                    Your cart is empty
+                  </h3>
+                  <p className="text-gray-500 mb-6">
+                    Add items to get started with your shopping
+                  </p>
                   <button
                     className="bg-pink-600 text-white py-3 px-6 rounded-2xl font-medium hover:bg-pink-700"
                     onClick={() => (window.location.href = "/")}
@@ -949,7 +1017,8 @@ const Cart = () => {
             {/* Subtotal (fixed height, content auto) */}
             <div className="bg-white rounded-xl p-5 shadow-lg mb-5">
               <div className="text-lg font-semibold mb-2">
-                Subtotal ({getTotalItems()} items): ₹{getSubtotal().toLocaleString()}
+                Subtotal ({getTotalItems()} items): ₹
+                {getSubtotal().toLocaleString()}
               </div>
               {getDiscountAmount() > 0 && (
                 <div className="text-base text-green-600 mb-2">
@@ -960,16 +1029,16 @@ const Cart = () => {
                 Total: ₹{getTotalAmount().toLocaleString()}
               </div>
               <div className="flex flex-col gap-3">
-                <CouponSection 
+                <CouponSection
                   onApplyDiscount={handleApplyDiscount}
                   onRemoveDiscount={handleRemoveDiscount}
                   hasDiscount={hasDiscount}
                   appliedDiscount={appliedDiscount}
                   loading={applyingDiscount || removingDiscount}
                 />
-                <button 
+                <button
                   onClick={handleProceedToBuy}
-                  className="bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 disabled:opacity-50" 
+                  className="bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 disabled:opacity-50"
                   disabled={!cartItems.length}
                 >
                   Proceed to Buy ({getTotalItems()} items)
@@ -984,9 +1053,13 @@ const Cart = () => {
               </div>
               <div className="flex-1 overflow-y-auto px-5 pb-5 hide-scrollbar">
                 {dealsLoading ? (
-                  <div className="text-center py-8 text-gray-500">Loading deals...</div>
+                  <div className="text-center py-8 text-gray-500">
+                    Loading deals...
+                  </div>
                 ) : deals.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">No deals available</div>
+                  <div className="text-center py-8 text-gray-500">
+                    No deals available
+                  </div>
                 ) : (
                   deals.map((deal) => (
                     <DealItem
@@ -1005,18 +1078,18 @@ const Cart = () => {
       {showSignIn && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-xl shadow-xl p-4 max-w-md w-full mx-4">
-            <button 
+            <button
               onClick={() => setShowSignIn(false)}
               className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 z-50"
             >
               ✕
             </button>
-            <SignIn 
+            <SignIn
               isOpen={true}
               onClose={() => {
                 setShowSignIn(false);
                 if (auth.isAuthenticated) {
-                  navigate('/checkout');
+                  navigate("/checkout");
                 }
               }}
               initialMode="login"

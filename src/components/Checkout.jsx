@@ -8,23 +8,122 @@ import {
   verifyPayment, 
   handlePaymentSuccess, 
   handlePaymentFailure,
-  clearPaymentError,
-  clearCurrentPayment
+  clearPaymentError
 } from '../Redux/slices/paymentSlice';
 import { createOrder } from '../Redux/slices/ordersSlice';
+import { validateDiscountAsync, applyDiscountAsync, removeDiscountAsync } from '../Redux/slices/cartSlice';
+
+// CouponSection Component
+const CouponSection = ({ onApplyDiscount, onRemoveDiscount, hasDiscount, appliedDiscount, loading }) => {
+  const [couponCode, setCouponCode] = useState('');
+  const [showCouponInput, setShowCouponInput] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setError('Please enter a coupon code');
+      return;
+    }
+    
+    setError('');
+    const result = await onApplyDiscount(couponCode.trim());
+    if (result.success) {
+      setCouponCode('');
+      setShowCouponInput(false);
+    } else {
+      setError(result.error || 'Failed to apply coupon');
+    }
+  };
+
+  const handleRemoveDiscount = async () => {
+    setError('');
+    const result = await onRemoveDiscount();
+    if (!result.success) {
+      setError(result.error || 'Failed to remove discount');
+    }
+  };
+
+  if (hasDiscount && appliedDiscount) {
+    return (
+      <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+        <div className="flex flex-col">
+          <span className="text-green-600 text-sm font-medium">✓ Discount Applied</span>
+          <span className="text-green-700 text-xs">
+            {appliedDiscount.code} - ₹{(appliedDiscount.discountAmount || 0).toLocaleString()} off
+          </span>
+        </div>
+        <button
+          onClick={handleRemoveDiscount}
+          disabled={loading}
+          className="text-red-600 text-xs hover:underline disabled:opacity-50"
+        >
+          Remove
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-3">
+      {error && (
+        <div className="text-red-500 text-xs mb-2 p-2 bg-red-50 rounded">
+          {error}
+        </div>
+      )}
+      
+      {!showCouponInput ? (
+        <button
+          onClick={() => {
+            setShowCouponInput(true);
+            setError('');
+          }}
+          className="w-full bg-white border border-pink-300 text-pink-600 py-3 rounded-3xl text-sm font-semibold hover:bg-pink-50 transition-colors"
+        >
+          Add Coupon
+        </button>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={couponCode}
+            onChange={(e) => {
+              setCouponCode(e.target.value);
+              setError('');
+            }}
+            placeholder="Enter coupon code"
+            className="flex-1 px-3 py-2 border border-pink-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-200"
+            onKeyPress={(e) => e.key === 'Enter' && handleApplyCoupon()}
+          />
+          <button
+            onClick={handleApplyCoupon}
+            disabled={!couponCode.trim() || loading}
+            className="bg-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Applying...' : 'Apply'}
+          </button>
+          <button
+            onClick={() => {
+              setShowCouponInput(false);
+              setCouponCode('');
+              setError('');
+            }}
+            className="text-gray-500 px-2 hover:text-gray-700"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
-  const { items: cartItems, totals, clearCartItems } = useCart();
+  const { items: cartItems, totals, clearCartItems, hasDiscount, appliedDiscount, applyingDiscount, removingDiscount } = useCart();
   const { user, isAuthenticated } = useSelector(state => state.auth);
-  const { 
-    loading: paymentLoading, 
-    error: paymentError,
-    razorpayOrderId,
-    razorpayKey 
-  } = useSelector(state => state.payment);
+  const { loading: paymentLoading, error: paymentError } = useSelector(state => state.payment);
 
   // Form states
   const [shippingAddress, setShippingAddress] = useState({
@@ -52,6 +151,7 @@ const Checkout = () => {
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
+  const [notification, setNotification] = useState(null);
 
   // Load Razorpay script
   useEffect(() => {
@@ -74,7 +174,6 @@ const Checkout = () => {
         phone: user.phone || ''
       }));
 
-      // If user has saved addresses, use the first one
       if (user.addresses && user.addresses.length > 0) {
         const firstAddress = user.addresses[0];
         setShippingAddress(prev => ({
@@ -110,7 +209,6 @@ const Checkout = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Validate shipping address
     if (!shippingAddress.name.trim()) newErrors.name = 'Name is required';
     if (!shippingAddress.addressLine1.trim()) newErrors.addressLine1 = 'Address is required';
     if (!shippingAddress.city.trim()) newErrors.city = 'City is required';
@@ -120,7 +218,6 @@ const Checkout = () => {
     if (!shippingAddress.phone.trim()) newErrors.phone = 'Phone is required';
     if (!/^\d{10}$/.test(shippingAddress.phone)) newErrors.phone = 'Invalid phone number';
 
-    // Validate billing address if different
     if (!useSameAddress) {
       if (!billingAddress.name.trim()) newErrors.billingName = 'Billing name is required';
       if (!billingAddress.addressLine1.trim()) newErrors.billingAddress = 'Billing address is required';
@@ -136,6 +233,79 @@ const Checkout = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Handle coupon actions
+  const handleApplyDiscount = async (code) => {
+    if (!code.trim()) {
+      showNotification('Please enter a discount code', 'error');
+      return { success: false, error: 'Please enter a discount code' };
+    }
+
+    try {
+      const productIds = cartItems.map(item => item.product?._id || item.productId);
+      
+      const validationResult = await dispatch(
+        validateDiscountAsync({ 
+          code: code.trim(), 
+          productIds 
+        })
+      ).unwrap();
+
+      if (!validationResult?.data?.canUse) {
+        const errorMessage = validationResult?.data?.message || 'Invalid discount code';
+        throw new Error(errorMessage);
+      }
+
+      const result = await dispatch(
+        applyDiscountAsync({ 
+          code: code.trim(), 
+          type: 'coupon' 
+        })
+      ).unwrap();
+      
+      const discountAmount = result.appliedCoupon?.discountAmount || 
+                           result.appliedVoucher?.discountAmount || 
+                           0;
+      
+      showNotification(
+        `Discount applied successfully! You saved ₹${discountAmount}`, 
+        'success'
+      );
+      return { success: true, result };
+    } catch (error) {
+      const errorMessage = typeof error === 'string' ? error : error.message || '';
+      
+      if (errorMessage.toLowerCase().includes('already used')) {
+        showNotification('You have already used this discount code', 'error');
+      } else if (errorMessage.toLowerCase().includes('expired')) {
+        showNotification('This discount code has expired', 'error');
+      } else if (errorMessage.toLowerCase().includes('not found') || 
+                 errorMessage.toLowerCase().includes('invalid')) {
+        showNotification('Invalid discount code', 'error');
+      } else {
+        showNotification(errorMessage || 'Failed to apply discount', 'error');
+      }
+      
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const handleRemoveDiscount = async () => {
+    try {
+      await dispatch(removeDiscountAsync()).unwrap();
+      showNotification('Discount removed successfully', 'info');
+      return { success: true };
+    } catch (error) {
+      const errorMessage = typeof error === 'string' ? error : error.message || '';
+      showNotification('Failed to remove discount', 'error');
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const showNotification = (message, type) => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
   // Handle Razorpay payment
   const handleRazorpayPayment = (orderId, razorpayOrderId, razorpayKey) => {
     const options = {
@@ -149,7 +319,6 @@ const Checkout = () => {
         try {
           setIsProcessing(true);
           
-          // Verify payment - log issues but proceed (payment success is primary)
           try {
             await dispatch(verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
@@ -158,10 +327,8 @@ const Checkout = () => {
             })).unwrap();
           } catch (verifyError) {
             console.warn('Payment verification had issues (non-fatal):', verifyError);
-            // Continue even if verification fails (e.g., email issue)
           }
 
-          // Handle payment success - log issues but proceed
           try {
             await dispatch(handlePaymentSuccess({
               razorpay_order_id: response.razorpay_order_id,
@@ -170,30 +337,23 @@ const Checkout = () => {
             })).unwrap();
           } catch (successError) {
             console.warn('Payment success handler had issues (non-fatal):', successError);
-            // Continue even if success handler fails (e.g., email notification issue)
           }
 
-          // Clear cart - log if fails, but proceed to navigation
           try {
             await clearCartItems();
           } catch (clearError) {
             console.warn('Failed to clear cart immediately (non-fatal):', clearError);
-            // Cart will be cleared on next load/refresh if API call was made
           }
 
-          // Always navigate on payment handler success - unmounts component
           navigate(`/order-success/${orderId}`);
         } catch (error) {
-          // Only fatal errors reach here (unlikely with above structure)
           console.error('Unexpected payment processing error:', error);
           alert('Payment was processed, but there was an issue finalizing. Please check your orders or contact support.');
-          // Still attempt to clear cart and navigate as fallback
           try {
             await clearCartItems();
           } catch {}
           navigate(`/order-success/${orderId}`);
         } finally {
-          // This may not execute if navigated, but safe
           setIsProcessing(false);
         }
       },
@@ -220,8 +380,6 @@ const Checkout = () => {
         color: '#EC4899'
       }
     };
-
-    console.log('Razorpay Options:', options);
 
     const razorpay = new window.Razorpay(options);
     
@@ -262,7 +420,6 @@ const Checkout = () => {
       setIsProcessing(true);
       dispatch(clearPaymentError());
 
-      // Prepare order data
       const orderData = {
         items: cartItems.map(item => ({
           product: item.product?._id || item.productId,
@@ -280,33 +437,24 @@ const Checkout = () => {
         subtotal: totals.subtotal,
         totalDiscountAmount: totals.discountAmount || 0,
         shippingCharge: 0,
-        //taxAmount: taxAmount, // ✅ Include tax
-        total: grandTotal      // ✅ New final total with tax
+        total: grandTotal
       };
 
-      // Create order
       const orderResult = await dispatch(createOrder(orderData)).unwrap();
-      
-      // Backend returns orderId, not _id
       const orderId = orderResult.orderId || orderResult._id;
       
       if (!orderId) {
         throw new Error('Order created but ID not found. Please contact support.');
       }
 
-      // Initiate payment
       const paymentResult = await dispatch(initiatePayment({
         orderId,
         method: paymentMethod
       })).unwrap();
 
-      console.log('Payment initiated:', paymentResult);
-
-      // Extract Razorpay data from nested structure
       const razorpayOrderId = paymentResult.order?.id;
       const razorpayKey = paymentResult.key;
 
-      // Open Razorpay checkout
       if (paymentMethod === 'razorpay' && razorpayOrderId && razorpayKey) {
         handleRazorpayPayment(
           orderId,
@@ -314,7 +462,6 @@ const Checkout = () => {
           razorpayKey
         );
       } else {
-        console.error('Missing Razorpay data:', { razorpayOrderId, razorpayKey });
         throw new Error('Payment initialization incomplete');
       }
     } catch (error) {
@@ -325,10 +472,9 @@ const Checkout = () => {
     }
   };
 
-  // Just before return(), calculate tax based on subtotal - discount
+  // Calculate totals
   const subtotalAfterDiscount = totals.subtotal - (totals.discountAmount || 0);
-  //const taxAmount = subtotalAfterDiscount * 0.18; // 18% GST
-  const grandTotal = subtotalAfterDiscount; // New final total
+  const grandTotal = subtotalAfterDiscount;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -338,6 +484,16 @@ const Checkout = () => {
         {paymentError && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
             {paymentError}
+          </div>
+        )}
+
+        {notification && (
+          <div className={`border rounded mb-6 p-4 ${
+            notification.type === 'success' ? 'bg-green-100 border-green-400 text-green-700' :
+            notification.type === 'error' ? 'bg-red-100 border-red-400 text-red-700' :
+            'bg-blue-100 border-blue-400 text-blue-700'
+          }`}>
+            {notification.message}
           </div>
         )}
 
@@ -479,7 +635,6 @@ const Checkout = () => {
 
               {!useSameAddress && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Similar fields as shipping address */}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                     <input
@@ -656,6 +811,14 @@ const Checkout = () => {
                   </span>
                 </div>
               </div>
+
+              <CouponSection 
+                onApplyDiscount={handleApplyDiscount}
+                onRemoveDiscount={handleRemoveDiscount}
+                hasDiscount={hasDiscount}
+                appliedDiscount={appliedDiscount}
+                loading={applyingDiscount || removingDiscount}
+              />
 
               <button
                 onClick={handlePlaceOrder}
