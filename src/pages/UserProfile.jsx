@@ -1,13 +1,15 @@
 //pages/UserProfile.jsx
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom"; // Add this import for better navigation
 import { apiService } from "../services/api";
 import { logout } from "../Redux/slices/authSlice";
 import Orders from "../components/Orders";
 
 const UserProfile = () => {
   const dispatch = useDispatch();
-  const { isAuthenticated } = useSelector((state) => state.auth);
+  const navigate = useNavigate(); // Use navigate instead of window.location for SPA-friendly redirect
+  const { user, token, isAuthenticated } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('profile'); // New state for tab management
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +36,7 @@ const UserProfile = () => {
   // Redirect if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      window.location.href = "/";
+      navigate("/", { replace: true }); // Use navigate for SPA redirect
       return;
     }
     
@@ -42,7 +44,7 @@ const UserProfile = () => {
     if (activeTab === 'profile') {
       fetchProfile();
     }
-  }, [isAuthenticated, activeTab]);
+  }, [isAuthenticated, activeTab, navigate]);
 
   const fetchProfile = async () => {
     try {
@@ -58,18 +60,30 @@ const UserProfile = () => {
         addresses: response.data.addresses || []
       });
     } catch (error) {
-      const errorMsg = error.message || "Failed to fetch profile data";
-      setError(errorMsg);
-      console.error("Profile fetch error:", error);
+      // Handle the full error object structure from API
+      const errorObj = error; // This could be the thrown data or Error instance
+      const errorMsg = errorObj.message || errorObj.errors?.[0]?.message || "Failed to fetch profile data";
+      const statusCode = errorObj.statusCode || (errorObj.message && parseInt(errorObj.message.match(/status: (\d+)/)?.[1]) || 0);
       
-      // Handle authentication errors immediately
-      if (errorMsg.includes('401') || 
-          errorMsg.includes('unauthorized') || 
-          errorMsg.includes('token') || 
-          errorMsg.includes('expired')) {
-        dispatch(logout());
-        window.location.href = "/";
+      console.error("Profile fetch error:", errorObj);
+      
+      // Enhanced auth error detection
+      const isAuthError = statusCode === 401 || 
+                          errorMsg.toLowerCase().includes('unauthorized') || 
+                          errorMsg.toLowerCase().includes('token') || 
+                          errorMsg.toLowerCase().includes('expired') ||
+                          errorObj.errors?.some(err => err.message.toLowerCase().includes('unauthorized'));
+      
+      if (isAuthError) {
+        console.log("Detected auth error, logging out and redirecting...");
+        dispatch(logout()); // This should clear localStorage via clearAuthStorage()
+        // Verify token cleared
+        console.log("Token after logout:", localStorage.getItem('token'));
+        // Redirect to home (you can modify to open login modal via a global state or route)
+        navigate("/", { replace: true, state: { from: 'profile', reason: 'session_expired' } }); // Pass state to trigger modal on home
         return;
+      } else {
+        setError(errorMsg);
       }
     } finally {
       setLoading(false);
@@ -135,15 +149,34 @@ const UserProfile = () => {
     setSuccess("");
     
     // Don't send email since it can't be updated
-    const {...updateData } = formData;
+    const { email, ...updateData } = formData;
     
     const response = await apiService.updateUserProfile(updateData);
     setProfileData(response.data);
     setSuccess("Profile updated successfully!");
     setEditing(false);
   } catch (error) {
-    setError(error.message || "Failed to update profile");
-    console.error("Profile update error:", error);
+    // Similar enhanced error handling for update
+    const errorObj = error;
+    const errorMsg = errorObj.message || errorObj.errors?.[0]?.message || "Failed to update profile";
+    const statusCode = errorObj.statusCode || (errorObj.message && parseInt(errorObj.message.match(/status: (\d+)/)?.[1]) || 0);
+    
+    console.error("Profile update error:", errorObj);
+    
+    const isAuthError = statusCode === 401 || 
+                        errorMsg.toLowerCase().includes('unauthorized') || 
+                        errorMsg.toLowerCase().includes('token') || 
+                        errorMsg.toLowerCase().includes('expired') ||
+                        errorObj.errors?.some(err => err.message.toLowerCase().includes('unauthorized'));
+    
+    if (isAuthError) {
+      console.log("Auth error during update, logging out...");
+      dispatch(logout());
+      navigate("/", { replace: true, state: { from: 'profile', reason: 'session_expired' } });
+      return;
+    } else {
+      setError(errorMsg);
+    }
   } finally {
     setLoading(false);
   }
@@ -151,12 +184,12 @@ const UserProfile = () => {
 
   const handleLogout = () => {
     dispatch(logout());
-    window.location.href = "/";
+    navigate("/", { replace: true });
   };
 
   // If not authenticated, redirect immediately (additional safety check)
   if (!isAuthenticated) {
-    window.location.href = "/";
+    navigate("/", { replace: true });
     return null;
   }
 
@@ -196,7 +229,7 @@ const UserProfile = () => {
             <div className="flex gap-4">
               <button
                 onClick={handleLogout}
-                className="px-6 py-2 bg-pink-500 text-white rounded-md hover:bg-pink-700 transition-colors"
+                className="px-6 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
               >
                 Logout
               </button>
