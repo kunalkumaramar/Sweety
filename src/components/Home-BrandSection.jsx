@@ -31,7 +31,7 @@ const CloudinaryImage = forwardRef(({
     if (!url?.includes('cloudinary.com')) return url;
    
     // Handle Cloudinary URL with version
-    const parts = url.match(/(https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\/)([^\/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
+    const parts = url.match(/(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
     if (!parts) return url;
    
     const [, base, , ver, path, query] = parts;
@@ -46,7 +46,7 @@ const CloudinaryImage = forwardRef(({
   const generateSrcSet = () => {
     if (!src?.includes('cloudinary.com')) return undefined;
    
-    const parts = src.match(/(https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\/)([^\/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
+    const parts = src.match(/(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
     if (!parts) return undefined;
    
     const [, base, , ver, path, query] = parts;
@@ -73,7 +73,7 @@ const CloudinaryImage = forwardRef(({
       alt={alt}
       className={className}
       loading={priority ? 'eager' : 'lazy'}
-      fetchpriority={priority ? 'high' : undefined}
+      fetchPriority={priority ? 'high' : undefined}
       {...props}
     />
   );
@@ -120,11 +120,11 @@ const LingerieHeroSection = () => {
     if (isMobile) {
       const leftUrl = "https://res.cloudinary.com/dhezrgjf6/image/upload/f_auto,q_auto:eco,w_800/v1759750904/prd3_q8a5wg.jpg";
       // Simple optimization for preload
-      const preloadUrl = leftUrl.replace(/\/upload\/[^\/]+/, '/upload/f_auto,q_auto:eco,w_800,c_limit/');
+      const preloadUrl = leftUrl.replace(/\/upload\/[^/]+/, '/upload/f_auto,q_auto:eco,w_800,c_limit/');
       const link = document.createElement('link');
       link.rel = 'preload';
       link.as = 'image';
-      link.fetchpriority = 'high';
+      link.fetchPriority = 'high';
       link.href = preloadUrl;
       document.head.appendChild(link);
      

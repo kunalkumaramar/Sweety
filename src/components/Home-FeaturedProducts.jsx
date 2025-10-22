@@ -28,7 +28,7 @@ const CloudinaryImage = forwardRef(({
   const optimizeUrl = (url) => {
     if (!url?.includes('cloudinary.com')) return url;
    
-    const parts = url.match(/(https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\/)([^\/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
+    const parts = url.match(/(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
     if (!parts) return url;
    
     const [, base, , ver, path, query] = parts;
@@ -43,7 +43,7 @@ const CloudinaryImage = forwardRef(({
   const generateSrcSet = () => {
     if (thumbnail || !src?.includes('cloudinary.com')) return undefined;
    
-    const parts = src.match(/(https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\/)([^\/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
+    const parts = src.match(/(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
     if (!parts) return undefined;
    
     const [, base, , ver, path, query] = parts;
@@ -70,7 +70,7 @@ const CloudinaryImage = forwardRef(({
       alt={alt}
       className={className}
       loading={priority ? 'eager' : 'lazy'}
-      fetchpriority={priority ? 'high' : undefined}
+      fetchPriority={priority ? 'high' : undefined}
       {...props}
     />
   );
@@ -80,7 +80,7 @@ const CloudinaryImage = forwardRef(({
 const getOptimizedUrl = (url, isMobile, width = 400) => {
   if (!url?.includes('cloudinary.com')) return url;
  
-  const parts = url.match(/(https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\/)([^\/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
+  const parts = url.match(/(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
   if (!parts) return url;
  
   const [, base, , ver, path, query] = parts;
@@ -189,8 +189,6 @@ const FeaturedProducts = () => {
   const scrollTimeout = useRef(null);
   const autoScrollRef = useRef(null);
   const isUserInteracting = useRef(false);
-  const touchStart = useRef({ x: 0, y: 0 });
-  const touchEnd = useRef({ x: 0, y: 0 });
   const rafRef = useRef(null); // For requestAnimationFrame
 
   const API_BASE_URL =
@@ -302,12 +300,6 @@ const FeaturedProducts = () => {
       }
     };
 
-    const cacheKey = "featured_raw_products";
-    const cached = localStorage.getItem(cacheKey);
-    const cacheTime = localStorage.getItem(`${cacheKey}_time`);
-    const now = Date.now();
-    const cacheExpiry = 3600000; // 1 hour
-
     // Always fetch fresh data - remove cache to see all products
     fetchFeaturedProducts();
   }, [API_BASE_URL]);
@@ -333,7 +325,7 @@ const FeaturedProducts = () => {
         const link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'image';
-        link.fetchpriority = 'high';
+        link.fetchPriority = 'high';
         link.href = preloadUrl;
         document.head.appendChild(link);
        
