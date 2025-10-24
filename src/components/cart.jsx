@@ -15,7 +15,7 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ⭐ Enhanced Reusable Cart Item Component
-const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist }) => {
+const CartItem = ({ item, updateQuantity, deleteItem }) => {
   const itemRef = useRef(null);
   const quantityRef = useRef(null);
   const navigate = useNavigate();
@@ -83,19 +83,6 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist }) => {
       ease: "power2.in",
       onComplete: () => deleteItem(item._id),
     });
-  };
-
-  const handleAddToWishlist = () => {
-    addToWishlist(item);
-    const button = itemRef.current?.querySelector(".wishlist-btn");
-    if (button) {
-      gsap.to(button, {
-        scale: 1.1,
-        duration: 0.1,
-        yoyo: true,
-        repeat: 1,
-      });
-    }
   };
 
   const handleShare = async () => {
@@ -323,37 +310,13 @@ const CartItem = ({ item, updateQuantity, deleteItem, addToWishlist }) => {
 };
 
 // ⭐ Deal Item Component with better product filtering
-const DealItem = ({ deal, addToCart }) => {
+const DealItem = ({ deal,  }) => {
   const itemRef = useRef(null);
   const navigate = useNavigate();
 
   const goToDetail = () => navigate(`/product/${deal._id || deal.id}`);
 
-  const handleAddToCart = async () => {
-    const button = itemRef.current?.querySelector(".add-to-cart-btn");
-    if (button) {
-      gsap.to(button, { scale: 0.95, duration: 0.1, yoyo: true, repeat: 1 });
-    }
-
-    // Transform deal object to match expected format
-    const dealData = {
-      id: deal._id || deal.id,
-      _id: deal._id || deal.id,
-      name: deal.name,
-      price: deal.price,
-      originalPrice: deal.originalPrice || deal.price * 1.2,
-      images: deal.images || [],
-      colors: deal.colors || [],
-    };
-
-    // Use default color and size
-    const defaultColor = deal.colors?.[0]?.colorName || "";
-    const defaultSize = deal.colors?.[0]?.sizeStock?.[0]?.size || "M";
-    const defaultImage =
-      deal.colors?.[0]?.images?.[0] || deal.images?.[0] || "";
-
-    await addToCart(dealData, 1, defaultColor, defaultSize, defaultImage);
-  };
+  
 
   const originalPrice = deal.originalPrice || deal.price * 1.2;
   const discount = Math.round(
@@ -512,7 +475,7 @@ const CouponSection = ({
 // Main Cart Component
 const Cart = () => {
   const dispatch = useDispatch();
-  const [discountCode, setDiscountCode] = useState("");
+
   const [notification, setNotification] = useState(null);
   const navigate = useNavigate();
   const [showSignIn, setShowSignIn] = useState(false);
@@ -524,12 +487,9 @@ const Cart = () => {
     items: cartItems,
     totals,
     totalItems,
-    totalPrice,
     updateItemQuantity,
     deleteItem,
     addItemToCart,
-    applyDiscount,
-    removeDiscount,
     hasDiscount,
     appliedDiscount,
     applyingDiscount,
@@ -874,7 +834,7 @@ const Cart = () => {
             {cartItems.length > 0 && (
               <button
                 onClick={clearCartItems}
-                className="text-red-600 text-sm hover:underline"
+                className="text-pink-600 text-sm hover:underline"
               >
                 Clear All
               </button>
@@ -973,7 +933,7 @@ const Cart = () => {
                 {cartItems.length > 0 && (
                   <button
                     onClick={clearCartItems}
-                    className="text-red-600 text-sm hover:underline"
+                    className="text-pink-600 text-sm hover:underline"
                   >
                     Clear All
                   </button>
