@@ -6,7 +6,6 @@ import {
   addToCart,
   removeFromCart,
   updateQuantity,
-  clearCart,
   addToCartAsync,
   updateCartItemAsync,
   removeFromCartAsync,
@@ -168,46 +167,67 @@ export const useCart = () => {
     }
   }, [dispatch]);
 
-  // Update item quantity by item ID with better error handling
+// Update item quantity by item ID with better error handling and live subtotal update
   const updateItemQuantity = useCallback(async (itemId, newQuantity) => {
-    if (!itemId) {
-      console.error('Item ID is required');
-      return { success: false, error: 'Item ID is required' };
-    }
+  if (!itemId) {
+    console.error('Item ID is required');
+    return { success: false, error: 'Item ID is required' };
+  }
 
-    const item = items.find(item => item._id === itemId);
-    
-    if (!item) {
-      console.error('Item not found in cart');
-      return { success: false, error: 'Item not found' };
-    }
+  const item = items.find(item => item._id === itemId);
 
-    const validQuantity = Math.max(1, newQuantity || 1);
+  if (!item) {
+    console.error('Item not found in cart');
+    return { success: false, error: 'Item not found' };
+  }
 
+  const validQuantity = Math.max(1, newQuantity || 1);
+
+  try {
+    // ✅ Immediate UI feedback (local update)
+    dispatch(updateQuantity({
+      itemId,
+      quantity: validQuantity
+    }));
+
+    // ⚡ Optional: Optimistically recalculate totals locally for instant feedback
     try {
-      // Immediate UI feedback
-      dispatch(updateQuantity({ 
-        itemId, 
-        quantity: validQuantity 
-      }));
+      const localSubtotal = items.reduce((sum, i) => {
+        const price = i.product?.price || i.price || 0;
+        const qty = i._id === itemId ? validQuantity : (i.quantity || 1);
+        return sum + price * qty;
+      }, 0);
 
-      // API call
-      await dispatch(updateCartItemAsync({ 
-        itemId,
-        quantity: validQuantity,
-        size: item.size || 'M',
-        color: item.color || {},
-        selectedImage: item.selectedImage || ''
-      })).unwrap();
-
-      return { success: true };
-    } catch (error) {
-      console.error('Failed to update cart:', error);
-      // Refresh cart to restore correct state
-      dispatch(fetchCartDetails());
-      return { success: false, error: error.message || 'Failed to update item quantity' };
+      // If your cartSlice supports setTotals action, you can dispatch this:
+      dispatch({
+        type: 'cart/setTotals',
+        payload: { subtotal: localSubtotal, total: localSubtotal }
+      });
+    } catch (err) {
+      console.warn('Local subtotal update skipped:', err.message);
     }
-  }, [dispatch, items]);
+
+    // 🛠 Update on server
+    await dispatch(updateCartItemAsync({
+      itemId,
+      quantity: validQuantity,
+      size: item.size || 'M',
+      color: item.color || {},
+      selectedImage: item.selectedImage || ''
+    })).unwrap();
+
+    // 🔥 Refresh full cart details and totals after success
+    dispatch(fetchCartDetails());
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to update cart:', error);
+    // Fallback refresh in case of failure
+    dispatch(fetchCartDetails());
+    return { success: false, error: error.message || 'Failed to update item quantity' };
+  }
+}, [dispatch, items]);
+
 
   // Update cart quantity by change amount (for +/- buttons)
   const updateCartQuantity = useCallback(async (itemId, change) => {
