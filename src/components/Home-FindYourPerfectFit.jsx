@@ -85,13 +85,13 @@ const PerfectFitSection = () => {
 
   // Your original image URLs
   const images = [
-    "https://res.cloudinary.com/dihmaledw/image/upload/f_auto,q_auto:eco,w_800/v1759486594/DSC04399_1_1_uqeu3r.jpg",
-    "https://res.cloudinary.com/dihmaledw/image/upload/f_auto,q_auto:eco,w_800/v1759486587/_T7A4987_1_ltmbiq.jpg",
-    "https://res.cloudinary.com/dihmaledw/image/upload/f_auto,q_auto:eco,w_800/v1759485594/_T7A4667_kycdfp.jpg",
-    "https://res.cloudinary.com/dihmaledw/image/upload/f_auto,q_auto:eco,w_800/v1759485605/_T7A4854_oqkv8d.jpg",
-    "https://res.cloudinary.com/dihmaledw/image/upload/f_auto,q_auto:eco,w_800/v1759485594/_T7A4560_qeeabx.jpg",
-    "https://res.cloudinary.com/dihmaledw/image/upload/f_auto,q_auto:eco,w_800/v1759485590/_T7A4951_cdbzyj.jpg",
-    "https://res.cloudinary.com/dihmaledw/image/upload/f_auto,q_auto:eco,w_800/v1759486767/_T7A4629_1_mvuj7v.jpg",
+    "https://res.cloudinary.com/djgcv06ka/image/upload/v1761580515/img3_mp033b.webp",
+    "https://res.cloudinary.com/djgcv06ka/image/upload/v1761580516/img2_atfibh.webp",
+    "https://res.cloudinary.com/djgcv06ka/image/upload/v1761580516/img7_hdfcws.webp",
+    "https://res.cloudinary.com/djgcv06ka/image/upload/v1761580515/img5_v1ieaq.webp",
+    "https://res.cloudinary.com/djgcv06ka/image/upload/v1761580515/img6_i7eaya.webp",
+    "https://res.cloudinary.com/djgcv06ka/image/upload/v1761580514/img4_r9bktq.webp",
+    "https://res.cloudinary.com/djgcv06ka/image/upload/v1761580515/img1_hwxlzi.webp",
   ];
 
   const [loadedImages, setLoadedImages] = useState(
