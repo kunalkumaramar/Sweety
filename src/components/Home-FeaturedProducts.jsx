@@ -183,6 +183,7 @@ const FeaturedProducts = () => {
   const [error, setError] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [touchStartX, setTouchStartX] = useState(null);
 
   const containerRef = useRef(null);
   const scrollAccumulator = useRef(0);
@@ -419,6 +420,31 @@ const FeaturedProducts = () => {
     window.location.href = `/product/${product._id}`;
   }, []);
 
+  // Touch handlers for swipe on mobile
+  const onTouchStart = useCallback((e) => {
+    setTouchStartX(e.targetTouches[0].clientX);
+  }, []);
+
+  const onTouchEnd = useCallback((e) => {
+    if (!touchStartX) return;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const distance = touchStartX - touchEndX;
+    const minSwipeDistance = 50;
+
+    if (Math.abs(distance) > minSwipeDistance) {
+      if (distance > 0) {
+        // Swipe left -> next
+        handleNext();
+      } else {
+        // Swipe right -> previous
+        handlePrevious();
+      }
+    }
+
+    setTouchStartX(null);
+  }, [touchStartX, handleNext, handlePrevious]);
+
   const progressWidth = `${((currentIndex + itemsPerPage) / total) * 100}%`;
 
   if (loading) {
@@ -463,20 +489,24 @@ const FeaturedProducts = () => {
       </h2>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Navigation */}
-        <button
-          onClick={handlePrevious}
-          className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 rounded-sm shadow-lg transition-all duration-300 flex items-center justify-center bg-[#F9E2E7] hover:bg-pink-500 hover:shadow-xl hover:scale-105"
-        >
-          <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-        </button>
+        {/* Navigation - only on desktop */}
+        {!isMobile && (
+          <>
+            <button
+              onClick={handlePrevious}
+              className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 rounded-sm shadow-lg transition-all duration-300 flex items-center justify-center bg-[#F9E2E7] hover:bg-pink-500 hover:shadow-xl hover:scale-105"
+            >
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </button>
 
-        <button
-          onClick={handleNext}
-          className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 rounded-sm shadow-lg transition-all duration-300 flex items-center justify-center bg-[#F9E2E7] hover:bg-pink-500 hover:shadow-xl hover:scale-105"
-        >
-          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-        </button>
+            <button
+              onClick={handleNext}
+              className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 rounded-sm shadow-lg transition-all duration-300 flex items-center justify-center bg-[#F9E2E7] hover:bg-pink-500 hover:shadow-xl hover:scale-105"
+            >
+              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </button>
+          </>
+        )}
 
         {/* Circular Carousel */}
         <div
@@ -488,6 +518,8 @@ const FeaturedProducts = () => {
             perspective: isMobile ? "500px" : "900px", // Reduced perspective on mobile
             perspectiveOrigin: "center center",
           }}
+          onTouchStart={isMobile ? onTouchStart : undefined}
+          onTouchEnd={isMobile ? onTouchEnd : undefined}
         >
           <div className="relative w-full h-full flex items-center justify-center transform-gpu">
             {featuredProducts.map((product, index) => (

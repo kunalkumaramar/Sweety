@@ -11,8 +11,13 @@ const IntimatesCarousel = () => {
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [isMobile, setIsMobile] = useState(false);
+  const [touchStart, setTouchStart] = useState(null);
   const [loadedImages, setLoadedImages] = useState({});
   const containerRef = useRef(null);
+
+  const minSwipeDistance = 50;
+  const autoPlayInterval = 4000; // 4 seconds
 
   // Image optimization helper
   const optimizeImage = (url, width = 400) => {
@@ -28,13 +33,20 @@ const IntimatesCarousel = () => {
     dispatch(getCategories());
   }, [dispatch]);
 
-  // Responsive items per page
+  // Responsive items per page and mobile detection
   useEffect(() => {
     const updateItemsPerPage = () => {
       const width = window.innerWidth;
-      if (width < 768) setItemsPerPage(2);      // Mobile: 2 cards
-      else if (width < 1024) setItemsPerPage(3); // Medium: 3 cards  
-      else setItemsPerPage(4);                   // Large: 4 cards
+      if (width < 768) {
+        setItemsPerPage(2);      // Mobile: 2 cards
+        setIsMobile(true);
+      } else if (width < 1024) {
+        setItemsPerPage(3);      // Medium: 3 cards
+        setIsMobile(false);
+      } else {
+        setItemsPerPage(4);      // Large: 4 cards
+        setIsMobile(false);
+      }
     };
 
     updateItemsPerPage();
@@ -56,15 +68,50 @@ const IntimatesCarousel = () => {
   }, []);
 
   const nextSlide = () => {
-    if (currentIndex < categories.length - itemsPerPage) {
-      setCurrentIndex(prev => prev + 1);
+    if (categories.length > itemsPerPage) {
+      setCurrentIndex(prev => 
+        prev < categories.length - itemsPerPage ? prev + 1 : 0
+      );
     }
   };
 
   const prevSlide = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
+    if (categories.length > itemsPerPage) {
+      setCurrentIndex(prev => 
+        prev > 0 ? prev - 1 : categories.length - itemsPerPage
+      );
     }
+  };
+
+  // Auto-play functionality
+  useEffect(() => {
+    if (categories.length <= itemsPerPage) return;
+
+    const interval = setInterval(nextSlide, autoPlayInterval);
+
+    return () => clearInterval(interval);
+  }, [categories.length, itemsPerPage]);
+
+  // Touch handlers for swipe
+  const onTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = (e) => {
+    if (!touchStart) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const distance = touchStart - touchEndX;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && currentIndex < categories.length - itemsPerPage) {
+      nextSlide();
+    }
+    if (isRightSwipe && currentIndex > 0) {
+      prevSlide();
+    }
+
+    setTouchStart(null);
   };
 
   const handleCategoryClick = (category) => {
@@ -142,8 +189,8 @@ const IntimatesCarousel = () => {
 
       {/* Carousel Container */}
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Navigation Buttons - Hidden when not needed */}
-        {showPrevButton && (
+        {/* Navigation Buttons - Hidden on mobile */}
+        {showPrevButton && !isMobile && (
           <button
             onClick={prevSlide}
             className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 bg-pink-400 hover:bg-pink-500 rounded-sm shadow-lg transition-all duration-200 flex items-center justify-center hover:shadow-xl hover:scale-105"
@@ -153,7 +200,7 @@ const IntimatesCarousel = () => {
           </button>
         )}
 
-        {showNextButton && (
+        {showNextButton && !isMobile && (
           <button
             onClick={nextSlide}
             className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 bg-pink-400 hover:bg-pink-500 rounded-sm shadow-lg transition-all duration-200 flex items-center justify-center hover:shadow-xl hover:scale-105"
@@ -164,7 +211,10 @@ const IntimatesCarousel = () => {
         )}
 
         {/* Cards Container */}
-        <div className="overflow-hidden mx-2 sm:mx-14">
+        <div 
+          className="overflow-hidden mx-2 sm:mx-14"
+          {...(isMobile && showNavigation ? { onTouchStart, onTouchEnd } : {})}
+        >
           <div 
             ref={containerRef}
             className="flex transition-transform duration-200 ease-in-out"
