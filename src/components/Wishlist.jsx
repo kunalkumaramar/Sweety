@@ -3,13 +3,13 @@ import { useWishlist } from "./WishlistContext";
 import { useCart } from "../hooks/useCart";
 import { useNavigate } from "react-router-dom";
 import React, { useEffect, useRef, useState } from "react";
+import SignIn from "../pages/SignIn";
 import { gsap } from "gsap";
 
 // ⭐ Reusable Wishlist Item Component
 const WishlistItem = ({
   item,
   removeFromWishlist,
-  addToCart,
   moveToCart,
 }) => {
   const itemRef = useRef(null);
@@ -53,21 +53,7 @@ const WishlistItem = ({
     navigate(`/product/${item._id || item.id}`);
   };
 
-  const handleAddToCart = async () => {
-    const result = await addToCart(item);
-    if (result && result.success) {
-      // Show feedback animation
-      const button = itemRef.current?.querySelector(".add-to-cart-btn");
-      if (button) {
-        gsap.to(button, {
-          scale: 0.95,
-          duration: 0.1,
-          yoyo: true,
-          repeat: 1,
-        });
-      }
-    }
-  };
+
 
   const handleRemove = () => {
     // Animate removal
@@ -424,6 +410,7 @@ const Wishlist = () => {
 
   const { addItemToCart } = useCart();
   const containerRef = useRef(null);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   // Recommendations based on wishlist or popular products
   const [recommendations, setRecommendations] = useState([]);
@@ -572,241 +559,257 @@ const Wishlist = () => {
     );
   }
 
-  // Show login prompt if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="bg-gray-100 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl text-gray-300 mb-4">♡</div>
-          <h3 className="text-xl font-semibold text-gray-600 mb-2">
-            Please login to view your wishlist
-          </h3>
-          <p className="text-gray-500 mb-6">
-            Create an account or sign in to save your favorite items
-          </p>
-          <button
-            className="bg-pink-600 text-white py-3 px-6 rounded-2xl font-medium hover:bg-pink-700 transition-colors"
-            onClick={() => {
-              console.log('Trigger login modal');
-            }}
-          >
-            Sign In
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-gray-100 min-h-screen">
-      {/* Mobile Layout */}
-      <div className="lg:hidden">
-        <div
-          ref={containerRef}
-          className="p-3 pb-24"
-        >
-          {/* Quick Actions - Mobile First */}
-          <div className="bg-white rounded-xl p-4 shadow-lg mb-4">
-            <div className="text-base font-semibold text-gray-800 mb-4">
-              Quick Actions
-            </div>
-            <div className="flex flex-col gap-3">
-              <button
-                className="w-full bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleAddAllToCart}
-                disabled={wishlistItems.length === 0}
-              >
-                Move All to Cart
-              </button>
-              <button
-                className="w-full border border-pink-600 text-pink-600 py-3 rounded-3xl text-sm font-semibold hover:bg-pink-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleClearWishlist}
-                disabled={wishlistItems.length === 0}
-              >
-                Clear Wishlist
-              </button>
-            </div>
-          </div>
-
-          {/* Wishlist Items */}
-          <div className="bg-white rounded-xl shadow-lg mb-4">
-            <div className="flex justify-between items-center text-lg font-semibold text-gray-800 p-4 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <span className="text-pink-600">♡</span>
-                My Wishlist
-                <span className="text-gray-500 text-sm font-medium">
-                  ({getTotalItems()} items)
-                </span>
-              </div>
-            </div>
-
-            <div className="p-2">
-              {wishlistItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center text-center py-10">
-                  <div className="text-4xl text-gray-300 mb-4">♡</div>
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                    Your wishlist is empty
-                  </h3>
-                  <p className="text-gray-500 mb-6 text-sm">
-                    Save items you love by clicking the heart icon
-                  </p>
-                  <button
-                    className="bg-pink-600 text-white py-3 px-6 rounded-2xl font-medium hover:bg-pink-700 transition-colors text-sm"
-                    onClick={() => (window.location.href = "/")}
-                  >
-                    Start Shopping
-                  </button>
-                </div>
-              ) : (
-                wishlistItems.map((item) => (
-                  <WishlistItem
-                    key={item._id || item.id}
-                    item={item}
-                    removeFromWishlist={removeFromWishlist}
-                    addToCart={addItemToCart}
-                    moveToCart={moveToCart}
-                    renderStars={renderStars}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Recommendations */}
-          <div className="bg-white rounded-xl shadow-lg">
-            <div className="text-lg font-semibold text-gray-800 p-4 text-center border-b border-gray-200">
-              You Might Also Like
-            </div>
-            <div className="px-4 pb-4">
-              {loadingRecommendations ? (
-                <div className="flex justify-center items-center py-10">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
-                </div>
-              ) : recommendations.length > 0 ? (
-                recommendations.map((item) => (
-                  <RecommendationItem
-                    key={item._id || item.id}
-                    item={item}
-                    addToCart={addItemToCart}
-                    addToWishlist={addToWishlist}
-                    renderStars={renderStars}
-                  />
-                ))
-              ) : (
-                <div className="text-center py-10 text-gray-500 text-sm">
-                  No recommendations available
-                </div>
-              )}
-            </div>
+      { !isAuthenticated ? (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="text-6xl text-gray-300 mb-4">♡</div>
+            <h3 className="text-xl font-semibold text-gray-600 mb-2">
+              Please login to view your wishlist
+            </h3>
+            <p className="text-gray-500 mb-6">
+              Create an account or sign in to save your favorite items
+            </p>
+            <button
+              className="bg-pink-600 text-white py-3 px-6 rounded-2xl font-medium hover:bg-pink-700 transition-colors"
+              onClick={() => setShowSignIn(true)}
+            >
+              Sign In
+            </button>
           </div>
         </div>
-      </div>
-
-      {/* Desktop Layout */}
-      <div className="hidden lg:block p-5">
-        <div
-          ref={containerRef}
-          className="max-w-7xl mx-auto flex flex-row gap-5 h-[calc(100vh-40px)]"
-        >
-          {/* Left - Wishlist */}
-          <div className="flex-1 bg-white rounded-xl shadow-lg flex flex-col">
-            <div className="flex justify-between items-center text-xl font-semibold text-gray-800 p-5 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <span className="text-pink-600">♡</span>
-                My Wishlist
-                <span className="text-gray-500 text-base font-medium">
-                  ({getTotalItems()} items)
-                </span>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-5 py-2 hide-scrollbar">
-              {wishlistItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center py-20">
-                  <div className="text-6xl text-gray-300 mb-4">♡</div>
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                    Your wishlist is empty
-                  </h3>
-                  <p className="text-gray-500 mb-6">
-                    Save items you love by clicking the heart icon
-                  </p>
+      ) : (
+        <>
+          {/* Mobile Layout */}
+          <div className="lg:hidden">
+            <div
+              ref={containerRef}
+              className="p-3 pb-24"
+            >
+              {/* Quick Actions - Mobile First */}
+              <div className="bg-white rounded-xl p-4 shadow-lg mb-4">
+                <div className="text-base font-semibold text-gray-800 mb-4">
+                  Quick Actions
+                </div>
+                <div className="flex flex-col gap-3">
                   <button
-                    className="bg-pink-600 text-white py-3 px-6 rounded-2xl font-medium hover:bg-pink-700 transition-colors"
-                    onClick={() => (window.location.href = "/")}
+                    className="w-full bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleAddAllToCart}
+                    disabled={wishlistItems.length === 0}
                   >
-                    Start Shopping
+                    Move All to Cart
+                  </button>
+                  <button
+                    className="w-full border border-pink-600 text-pink-600 py-3 rounded-3xl text-sm font-semibold hover:bg-pink-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleClearWishlist}
+                    disabled={wishlistItems.length === 0}
+                  >
+                    Clear Wishlist
                   </button>
                 </div>
-              ) : (
-                wishlistItems.map((item) => (
-                  <WishlistItem
-                    key={item._id || item.id}
-                    item={item}
-                    removeFromWishlist={removeFromWishlist}
-                    addToCart={addItemToCart}
-                    moveToCart={moveToCart}
-                    renderStars={renderStars}
-                  />
-                ))
-              )}
+              </div>
+
+              {/* Wishlist Items */}
+              <div className="bg-white rounded-xl shadow-lg mb-4">
+                <div className="flex justify-between items-center text-lg font-semibold text-gray-800 p-4 border-b border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-pink-600">♡</span>
+                    My Wishlist
+                    <span className="text-gray-500 text-sm font-medium">
+                      ({getTotalItems()} items)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-2">
+                  {wishlistItems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-center py-10">
+                      <div className="text-4xl text-gray-300 mb-4">♡</div>
+                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        Your wishlist is empty
+                      </h3>
+                      <p className="text-gray-500 mb-6 text-sm">
+                        Save items you love by clicking the heart icon
+                      </p>
+                      <button
+                        className="bg-pink-600 text-white py-3 px-6 rounded-2xl font-medium hover:bg-pink-700 transition-colors text-sm"
+                        onClick={() => (window.location.href = "/")}
+                      >
+                        Start Shopping
+                      </button>
+                    </div>
+                  ) : (
+                    wishlistItems.map((item) => (
+                      <WishlistItem
+                        key={item._id || item.id}
+                        item={item}
+                        removeFromWishlist={removeFromWishlist}
+                        addToCart={addItemToCart}
+                        moveToCart={moveToCart}
+                        renderStars={renderStars}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Recommendations */}
+              <div className="bg-white rounded-xl shadow-lg">
+                <div className="text-lg font-semibold text-gray-800 p-4 text-center border-b border-gray-200">
+                  You Might Also Like
+                </div>
+                <div className="px-4 pb-4">
+                  {loadingRecommendations ? (
+                    <div className="flex justify-center items-center py-10">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+                    </div>
+                  ) : recommendations.length > 0 ? (
+                    recommendations.map((item) => (
+                      <RecommendationItem
+                        key={item._id || item.id}
+                        item={item}
+                        addToCart={addItemToCart}
+                        addToWishlist={addToWishlist}
+                        renderStars={renderStars}
+                      />
+                    ))
+                  ) : (
+                    <div className="text-center py-10 text-gray-500 text-sm">
+                      No recommendations available
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Right - Actions + Recommendations */}
-          <div className="w-2/5 flex flex-col gap-5">
-            {/* Quick Actions */}
-            <div className="bg-white rounded-xl p-5 shadow-lg">
-              <div className="text-lg font-semibold text-gray-800 mb-4">
-                Quick Actions
-              </div>
-              <div className="flex flex-col gap-3">
-                <button
-                  className="w-full bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleAddAllToCart}
-                  disabled={wishlistItems.length === 0}
-                >
-                  Move All to Cart
-                </button>
-                <button
-                  className="w-full border border-pink-600 text-pink-600 py-3 rounded-3xl text-sm font-semibold hover:bg-pink-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleClearWishlist}
-                  disabled={wishlistItems.length === 0}
-                >
-                  Clear Wishlist
-                </button>
-              </div>
-            </div>
+          {/* Desktop Layout */}
+          <div className="hidden lg:block p-5">
+            <div
+              ref={containerRef}
+              className="max-w-7xl mx-auto flex flex-row gap-5 h-[calc(100vh-40px)]"
+            >
+              {/* Left - Wishlist */}
+              <div className="flex-1 bg-white rounded-xl shadow-lg flex flex-col">
+                <div className="flex justify-between items-center text-xl font-semibold text-gray-800 p-5 border-b border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-pink-600">♡</span>
+                    My Wishlist
+                    <span className="text-gray-500 text-base font-medium">
+                      ({getTotalItems()} items)
+                    </span>
+                  </div>
+                </div>
 
-            {/* Recommendations */}
-            <div className="bg-white rounded-xl shadow-lg flex flex-col flex-1 min-h-0">
-              <div className="text-lg font-semibold text-gray-800 p-5 pb-3 text-center border-b border-gray-200">
-                You Might Also Like
+                <div className="flex-1 overflow-y-auto px-5 py-2 hide-scrollbar">
+                  {wishlistItems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center py-20">
+                      <div className="text-6xl text-gray-300 mb-4">♡</div>
+                      <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                        Your wishlist is empty
+                      </h3>
+                      <p className="text-gray-500 mb-6">
+                        Save items you love by clicking the heart icon
+                      </p>
+                      <button
+                        className="bg-pink-600 text-white py-3 px-6 rounded-2xl font-medium hover:bg-pink-700 transition-colors"
+                        onClick={() => (window.location.href = "/")}
+                      >
+                        Start Shopping
+                      </button>
+                    </div>
+                  ) : (
+                    wishlistItems.map((item) => (
+                      <WishlistItem
+                        key={item._id || item.id}
+                        item={item}
+                        removeFromWishlist={removeFromWishlist}
+                        addToCart={addItemToCart}
+                        moveToCart={moveToCart}
+                        renderStars={renderStars}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto px-5 pb-5 hide-scrollbar">
-                {loadingRecommendations ? (
-                  <div className="flex justify-center items-center py-10">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+
+              {/* Right - Actions + Recommendations */}
+              <div className="w-2/5 flex flex-col gap-5">
+                {/* Quick Actions */}
+                <div className="bg-white rounded-xl p-5 shadow-lg">
+                  <div className="text-lg font-semibold text-gray-800 mb-4">
+                    Quick Actions
                   </div>
-                ) : recommendations.length > 0 ? (
-                  recommendations.map((item) => (
-                    <RecommendationItem
-                      key={item._id || item.id}
-                      item={item}
-                      addToCart={addItemToCart}
-                      addToWishlist={addToWishlist}
-                      renderStars={renderStars}
-                    />
-                  ))
-                ) : (
-                  <div className="text-center py-10 text-gray-500">
-                    No recommendations available
+                  <div className="flex flex-col gap-3">
+                    <button
+                      className="w-full bg-pink-600 text-white py-3 rounded-3xl text-sm font-semibold hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleAddAllToCart}
+                      disabled={wishlistItems.length === 0}
+                    >
+                      Move All to Cart
+                    </button>
+                    <button
+                      className="w-full border border-pink-600 text-pink-600 py-3 rounded-3xl text-sm font-semibold hover:bg-pink-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleClearWishlist}
+                      disabled={wishlistItems.length === 0}
+                    >
+                      Clear Wishlist
+                    </button>
                   </div>
-                )}
+                </div>
+
+                {/* Recommendations */}
+                <div className="bg-white rounded-xl shadow-lg flex flex-col flex-1 min-h-0">
+                  <div className="text-lg font-semibold text-gray-800 p-5 pb-3 text-center border-b border-gray-200">
+                    You Might Also Like
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-5 pb-5 hide-scrollbar">
+                    {loadingRecommendations ? (
+                      <div className="flex justify-center items-center py-10">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+                      </div>
+                    ) : recommendations.length > 0 ? (
+                      recommendations.map((item) => (
+                        <RecommendationItem
+                          key={item._id || item.id}
+                          item={item}
+                          addToCart={addItemToCart}
+                          addToWishlist={addToWishlist}
+                          renderStars={renderStars}
+                        />
+                      ))
+                    ) : (
+                      <div className="text-center py-10 text-gray-500">
+                        No recommendations available
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
+        </>
+      )}
+
+      {/* SignIn Modal */}
+      {showSignIn && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-xl p-4 max-w-md w-full mx-4">
+            <button
+              onClick={() => setShowSignIn(false)}
+              className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 z-50"
+            >
+              ✕
+            </button>
+            <SignIn
+              isOpen={true}
+              onClose={() => setShowSignIn(false)}
+              initialMode="login"
+            />
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
