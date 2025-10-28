@@ -16,7 +16,6 @@ import {
   getSubcategoriesByCategory,
   getSubcategoryById,
 } from "../Redux/slices/subcategorySlice";
-import { addToCart } from "../Redux/slices/cartSlice";
 
 const Products = ({
   category: propCategory,
@@ -31,11 +30,9 @@ const Products = ({
   // Redux state
   const {
     products,
-    total,
     page,
     pages,
     searchResults,
-    searchTotal,
     searchPage,
     searchPages,
     searchQuery,
@@ -43,7 +40,6 @@ const Products = ({
     searchLoading,
     error,
     searchError,
-    
   } = useSelector((state) => state.products);
 
   const {
@@ -56,8 +52,6 @@ const Products = ({
   const {
     subcategories,
     currentSubcategory,
-    loading: subcategoriesLoading,
-    error: subcategoriesError,
   } = useSelector((state) => state.subcategories);
 
   const currentCategoryName = propCategory || urlCategory;
@@ -95,7 +89,7 @@ const Products = ({
 
   // Get current products based on mode
   const currentProducts = isSearchMode ? searchResults : products;
-  const currentTotal = isSearchMode ? searchTotal : total;
+ 
   const currentPageNum = isSearchMode ? searchPage : page;
   const currentTotalPages = isSearchMode ? searchPages : pages;
   const isLoading = isSearchMode ? searchLoading : loading;
@@ -113,7 +107,7 @@ const Products = ({
     if (!url) return url;
     return url.replace(
       '/upload/',
-      `/upload/f_auto,q_auto:eco,w_${width}/`
+      `/upload/f_webp,q_auto:eco,w_${width}/`
     );
   };
 
@@ -195,6 +189,7 @@ const Products = ({
     dispatch,
     categoryConfig,
     subcategoryConfig,
+    currentCategoryName,
     currentPage,
     isSearchMode,
     itemsPerPage,
@@ -246,30 +241,36 @@ const Products = ({
     if (!currentProducts || currentProducts.length === 0) return [];
 
     const values = currentProducts
-      .map((product) => {
-        switch (key) {
-          case "colors":
-            return product.colors?.map((color) => color.colorName) || [];
-          case "sizes":
-            // Get all sizes from all colors
-            const allSizes = [];
-            product.colors?.forEach((color) => {
-              color.sizeStock?.forEach((sizeObj) => {
-                if (sizeObj.stock > 0) {
-                  allSizes.push(sizeObj.size);
-                }
-              });
-            });
-            return allSizes;
-          case "tags":
-            return product.tags || [];
-          default:
-            return product[key];
-        }
-      })
-      .flat()
-      .filter(Boolean);
-    return [...new Set(values)];
+  .map((product) => {
+    switch (key) {
+      case "colors":
+        return product.colors?.map((color) => color.colorName) || [];
+
+      case "sizes": {
+        // ✅ Wrapped in braces to allow const declarations
+        const allSizes = [];
+        product.colors?.forEach((color) => {
+          color.sizeStock?.forEach((sizeObj) => {
+            if (sizeObj.stock > 0) {
+              allSizes.push(sizeObj.size);
+            }
+          });
+        });
+        return allSizes;
+      }
+
+      case "tags":
+        return product.tags || [];
+
+      default:
+        return product[key];
+    }
+  })
+  .flat()
+  .filter(Boolean);
+
+return [...new Set(values)];
+
   };
 
   // Filter and sort products locally
@@ -277,50 +278,56 @@ const Products = ({
     let filtered = [...currentProducts];
 
     // Apply filters
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
-        switch (key) {
-          case "color":
-            filtered = filtered.filter((product) =>
-              product.colors?.some((color) =>
-                color.colorName.toLowerCase().includes(value.toLowerCase())
-              )
-            );
-            break;
-          case "size":
-            filtered = filtered.filter((product) =>
-              product.colors?.some((color) =>
-                color.sizeStock?.some(
-                  (sizeObj) =>
-                    sizeObj.size.toLowerCase() === value.toLowerCase() &&
-                    sizeObj.stock > 0
-                )
-              )
-            );
-            break;
-          case "tags":
-            filtered = filtered.filter((product) =>
-              product.tags?.some((tag) =>
-                tag.toLowerCase().includes(value.toLowerCase())
-              )
-            );
-            break;
-          case "priceRange":
-            const [min, max] = value.split("-").map(Number);
-            filtered = filtered.filter((product) => {
-              const price = product.price;
-              return price >= min && (max ? price <= max : true);
-            });
-            break;
-          default:
-            if (product[key]) {
-              filtered = filtered.filter((product) =>
-                product[key].toLowerCase().includes(value.toLowerCase())
-              );
-            }
-        }
+  Object.entries(filters).forEach(([key, value]) => {
+  if (value) {
+    switch (key) {
+      case "color":
+        filtered = filtered.filter((product) =>
+          product.colors?.some((color) =>
+            color.colorName.toLowerCase().includes(value.toLowerCase())
+          )
+        );
+        break;
+
+      case "size":
+        filtered = filtered.filter((product) =>
+          product.colors?.some((color) =>
+            color.sizeStock?.some(
+              (sizeObj) =>
+                sizeObj.size.toLowerCase() === value.toLowerCase() &&
+                sizeObj.stock > 0
+            )
+          )
+        );
+        break;
+
+      case "tags":
+        filtered = filtered.filter((product) =>
+          product.tags?.some((tag) =>
+            tag.toLowerCase().includes(value.toLowerCase())
+          )
+        );
+        break;
+
+      case "priceRange": {
+        const [min, max] = value.split("-").map(Number);
+        filtered = filtered.filter((product) => {
+          const price = product.price;
+          return price >= min && (max ? price <= max : true);
+        });
+        break;
       }
-    });
+
+      default:
+        filtered = filtered.filter(
+          (product) =>
+            product[key] &&
+            product[key].toLowerCase().includes(value.toLowerCase())
+        );
+    }
+  }
+});
+
 
     // Apply sorting
     switch (sortBy) {
@@ -389,44 +396,13 @@ const Products = ({
     }
   };
 
-  const handleAddToCart = async (product, colorName, size = "m") => {
-    // Immediate UI feedback
-    dispatch(addToCart({ product, colorName, size, quantity: 1 }));
-
-    // API call in background
-    try {
-      await dispatch(
-        addToCartAsync({
-          productId: product._id,
-          quantity: 1,
-          size: size.toLowerCase(),
-        })
-      ).unwrap();
-
-      // Optionally show success message
-      console.log("Added to cart successfully");
-    } catch (error) {
-      // Handle error - you might want to show a toast notification
-      console.error("Failed to add to cart:", error);
-
-      // Optionally revert the local state change
-      dispatch(removeFromCart({ productId: product._id, colorName, size }));
-    }
-  };
+ 
 
   // Helper function to generate category path
   const getCategoryPath = (category) => {
     if (!category) return "/products";
     const categorySlug = category.name.toLowerCase().replace(/\s+/g, "-");
     return `/products/${categorySlug}`;
-  };
-
-  // Helper function to generate subcategory path
-  const getSubcategoryPath = (category, subcategory) => {
-    if (!category || !subcategory) return "/products";
-    const categorySlug = category.name.toLowerCase().replace(/\s+/g, "-");
-    const subcategorySlug = subcategory.name.toLowerCase().replace(/\s+/g, "-");
-    return `/products/${categorySlug}/${subcategorySlug}`;
   };
 
   if (isLoading || categoriesLoading) {
@@ -504,7 +480,7 @@ const Products = ({
   };
 
   const ProductCard = ({ product }) => {
-    const [currentColorIndex, setCurrentColorIndex] = useState(0);
+    const [currentColorIndex] = useState(0);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [loaded, setLoaded] = useState(false);
 
@@ -519,10 +495,7 @@ const Products = ({
       window.scrollTo({ top: 30, behavior: "smooth" });
     };
 
-    const handleColorChange = (colorIndex) => {
-      setCurrentColorIndex(colorIndex);
-      setCurrentImageIndex(0); // Reset image index when color changes
-    };
+ 
 
     return (
       <div
@@ -757,10 +730,6 @@ const Products = ({
         <div className="mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-pink-600 mb-1">
             {isSearchMode ? `Search Results for "${searchQuery}"` : pageTitle}
-            {/*<span className="text-gray-500 font-normal text-sm sm:text-base">
-              {" "}
-              ({filteredProducts.length} items)
-            </span>*/}
           </h1>
           {subcategoryConfig?.description && (
             <p className="text-pink-600 text-sm mt-2">

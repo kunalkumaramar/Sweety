@@ -366,6 +366,7 @@ const CouponSection = ({
   hasDiscount,
   appliedDiscount,
   loading,
+  isAuthenticated,
 }) => {
   const [couponCode, setCouponCode] = useState("");
   const [showCouponInput, setShowCouponInput] = useState(false);
@@ -432,9 +433,14 @@ const CouponSection = ({
             setShowCouponInput(true);
             setError("");
           }}
-          className="w-full bg-white border border-pink-300 text-pink-600 py-3 rounded-3xl text-sm font-semibold hover:bg-pink-50 transition-colors"
+          disabled={!isAuthenticated}
+          className={`w-full py-3 rounded-3xl text-sm font-semibold transition-colors ${
+            isAuthenticated
+              ? "bg-white border border-pink-300 text-pink-600 hover:bg-pink-50"
+              : "bg-gray-200 border border-gray-300 text-gray-500 cursor-not-allowed"
+          }`}
         >
-          Add Coupon
+          {isAuthenticated ? "Add Coupon" : "Sign Up to Add Coupon"}
         </button>
       ) : (
         <div className="flex gap-2">
@@ -446,12 +452,17 @@ const CouponSection = ({
               setError("");
             }}
             placeholder="Enter coupon code"
-            className="flex-1 px-3 py-2 border border-pink-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-200"
+            disabled={!isAuthenticated}
+            className={`flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 ${
+              isAuthenticated
+                ? "border-pink-300 focus:ring-pink-200"
+                : "bg-gray-100 border-gray-300 cursor-not-allowed"
+            }`}
             onKeyPress={(e) => e.key === "Enter" && handleApplyCoupon()}
           />
           <button
             onClick={handleApplyCoupon}
-            disabled={!couponCode.trim() || loading}
+            disabled={!couponCode.trim() || loading || !isAuthenticated}
             className="bg-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Applying..." : "Apply"}
@@ -647,6 +658,12 @@ const Cart = () => {
   }, [rawDeals, cartItems]);
 
   const handleApplyDiscount = async (code) => {
+    if (!isAuthenticated) {
+      showNotification("Please sign up to apply coupons", "error");
+      navigate("/signup");
+      return { success: false, error: "Not authenticated" };
+    }
+
     if (!code.trim()) {
       showNotification("Please enter a discount code", "error");
       return { success: false, error: "Please enter a discount code" };
@@ -805,6 +822,7 @@ const Cart = () => {
               hasDiscount={hasDiscount}
               appliedDiscount={appliedDiscount}
               loading={applyingDiscount || removingDiscount}
+              isAuthenticated={isAuthenticated}
             />
             <button
               onClick={handleProceedToBuy}
@@ -995,6 +1013,7 @@ const Cart = () => {
                   hasDiscount={hasDiscount}
                   appliedDiscount={appliedDiscount}
                   loading={applyingDiscount || removingDiscount}
+                  isAuthenticated={isAuthenticated}
                 />
                 <button
                   onClick={handleProceedToBuy}
