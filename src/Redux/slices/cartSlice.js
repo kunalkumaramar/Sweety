@@ -219,21 +219,28 @@ export const validateCartAsync = createAsyncThunk(
   }
 );
 
-// Merge cart (after user login)
 export const mergeCartAsync = createAsyncThunk(
-  'cart/mergeCartAsync',
+  'cart/mergeCart',
   async (sessionId, { rejectWithValue }) => {
-    console.log('🔄 Attempting to merge cart with sessionId:', sessionId);
     try {
       const response = await apiService.mergeCart(sessionId);
-      console.log('✅ Cart merged successfully:', response.data);
-      return response.data;
+      
+      // ADD DETAILED LOGGING
+      {/*console.log('=== MERGE CART API RESPONSE ===');
+      console.log('Full response:', response);
+      console.log('Items count:', response.items?.length);
+      console.log('First item structure:', response.items?.[0]);
+      console.log('First item product:', response.items?.[0]?.product);
+      console.log('Totals:', response.totals);*/}
+      
+      return response;
     } catch (error) {
-      console.error('❌ Cart merge failed:', error);
-      return rejectWithValue(error.message);
+      console.error('Merge cart error:', error);
+      return rejectWithValue(error.message || 'Failed to merge cart');
     }
   }
 );
+
 
 // Apply discount (only for authenticated users) - on 401, clear auth
 export const applyDiscountAsync = createAsyncThunk(
@@ -664,23 +671,77 @@ const cartSlice = createSlice({
       })
       .addCase(mergeCartAsync.fulfilled, (state, action) => {
         state.mergingCart = false;
+        
+        console.log('=== MERGE CART API RESPONSE ===', action.payload);
+        
         // Update state with merged cart
-        if (action.payload.items) {
+        if (action.payload.items && Array.isArray(action.payload.items)) {
           state.apiItems = action.payload.items;
-          state.items = action.payload.items.map(item => ({
-            _id: item._id,
-            product: item.product,
-            size: item.size,
-            quantity: item.quantity,
-            color: item.color || {},
-            selectedImage: item.selectedImage,
-            addedAt: item.addedAt,
-            itemTotal: item.itemTotal || (item.product.price * item.quantity)
-          }));
           
-          // Recalculate totals
-          state.totalItems = state.items.reduce((total, item) => total + item.quantity, 0);
-          state.totalPrice = state.items.reduce((total, item) => total + (item.itemTotal || item.product.price * item.quantity), 0);
+          // Map with better null safety and multiple fallbacks
+          state.items = action.payload.items.map(item => {
+            // Extract product info - handle different API structures
+            const product = item.product || item.productDetails || item.productId || {};
+            
+            // Handle case where product might be just an ID (needs to be populated)
+            if (typeof product === 'string') {
+              console.error('Product is just an ID, not populated:', product);
+            }
+            
+            return {
+              id: item.id || item._id,
+              product: {
+                id: product.id || product._id,
+                name: product.name || 'Unknown Product',
+                price: product.price || product.sellingPrice || 0,
+                originalPrice: product.originalPrice || product.mrp || product.price || 0,
+                images: Array.isArray(product.images) ? product.images : [],
+                colors: Array.isArray(product.colors) ? product.colors : [],
+                description: product.description || '',
+                rating: product.rating || 0
+              },
+              size: item.size || 'M',
+              quantity: item.quantity || 1,
+              color: item.color || { colorName: 'Default', colorHex: '#000000' },
+              selectedImage: item.selectedImage || product.images?.[0] || '',
+              addedAt: item.addedAt || new Date().toISOString(),
+              itemTotal: item.itemTotal || (product.price || 0) * (item.quantity || 1)
+            };
+          });
+          
+          console.log('Mapped items for Redux state:', state.items);
+        }
+        
+        // Update totals from merge response
+        if (action.payload.totals) {
+          state.totals = action.payload.totals;
+        }
+        
+        // Update cart details
+        if (action.payload.cart) {
+          state.cart = action.payload.cart;
+          state.cartDetails = action.payload.cart;
+        }
+        
+        // Recalculate local totals if server totals not available
+        if (!action.payload.totals) {
+          state.totalItems = state.items.reduce((total, item) => total + (item.quantity || 0), 0);
+          state.totalPrice = state.items.reduce((total, item) => 
+            total + (item.itemTotal || 0), 0
+          );
+        } else {
+          state.totalItems = action.payload.totals.itemCount || 0;
+          state.totalPrice = action.payload.totals.total || 0;
+        }
+        
+        // Update discount state
+        if (action.payload.totals?.discountAmount > 0) {
+          state.hasDiscount = true;
+        }
+        if (action.payload.cart?.appliedCoupon) {
+          state.appliedDiscount = action.payload.cart.appliedCoupon;
+        } else if (action.payload.cart?.appliedVoucher) {
+          state.appliedDiscount = action.payload.cart.appliedVoucher;
         }
       })
       .addCase(mergeCartAsync.rejected, (state, action) => {

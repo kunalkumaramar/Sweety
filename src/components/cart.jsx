@@ -19,6 +19,17 @@ const CartItem = ({ item, updateQuantity, deleteItem }) => {
   const itemRef = useRef(null);
   const quantityRef = useRef(null);
   const navigate = useNavigate();
+  // SAFETY CHECK - Skip if item is invalid
+  if (!item) {
+    console.error('CartItem received null/undefined item');
+    return null;
+  }
+  
+  if (!item.product) {
+    console.error('CartItem received item without product:', item);
+    return null;
+  }
+
 
   useEffect(() => {
     const element = itemRef.current;
@@ -106,10 +117,19 @@ const CartItem = ({ item, updateQuantity, deleteItem }) => {
     }
   };
 
+  const product = item.product || {};
   // FIXED: Better price calculation with proper fallbacks
-  const currentPrice = item.product?.price || item.price || 0;
-  const originalPrice =
-    item.product?.originalPrice || (currentPrice > 0 ? currentPrice * 1.2 : 0);
+  const currentPrice = 
+    product.price || 
+    product.sellingPrice || 
+    item.price ||
+    (item.itemTotal && item.quantity ? item.itemTotal / item.quantity : 0) ||
+    0;
+  const originalPrice = 
+    product.originalPrice || 
+    product.mrp ||
+    item.originalPrice ||
+    (currentPrice > 0 ? currentPrice * 1.2 : 0);
   const discount =
     originalPrice > 0 && currentPrice > 0
       ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
@@ -117,6 +137,14 @@ const CartItem = ({ item, updateQuantity, deleteItem }) => {
 
   // Get proper item total - use server-calculated value or calculate locally
   const itemTotal = item.itemTotal || currentPrice * (item.quantity || 1);
+  // Debug logging
+  {/*console.log('CartItem Rendering:', {
+    itemId: item.id,
+    productName: product.name,
+    currentPrice,
+    itemTotal,
+    quantity: item.quantity
+  });*/}
 
   return (
     <div
@@ -493,7 +521,7 @@ const Cart = () => {
   const auth = useSelector((state) => state.auth);
   // Get cart items from Redux
   const { items } = useSelector((state) => state.cart);
-
+  const [proceedAfterLogin, setProceedAfterLogin] = useState(false);
   const {
     items: cartItems,
     totals,
@@ -512,12 +540,12 @@ const Cart = () => {
 
   const handleProceedToBuy = async () => {
     if (!cartItems.length) return;
-
-    const token = localStorage.getItem("token");
-    if (!token || !auth.isAuthenticated) {
+    const token = localStorage.getItem('token');
+    if (!token && !auth.isAuthenticated) {
+      setProceedAfterLogin(true);
       setShowSignIn(true);
     } else {
-      navigate("/checkout");
+      navigate('/checkout');
     }
   };
 
@@ -537,22 +565,36 @@ const Cart = () => {
   };
 
   const getSubtotal = () => {
-    if (totals?.subtotal >= 0) return totals.subtotal;
-    return cartItems.reduce((total, item) => {
-      const price = item.product?.price || item.price || 0;
-      const quantity = item.quantity || 0;
-      const itemTotal = item.itemTotal || price * quantity;
-      return total + itemTotal;
-    }, 0);
-  };
+  // Check if totals exist and are valid
+  if (totals?.subtotal !== undefined && totals?.subtotal >= 0) {
+    return totals.subtotal;
+  }
+  
+  // Fallback: Calculate from items directly
+  return cartItems.reduce((total, item) => {
+    const price = item.product?.price || item.price || 0;
+    const quantity = item.quantity || 0;
+    const itemTotal = item.itemTotal || (price * quantity);
+    return total + itemTotal;
+  }, 0);
+};
 
-  const getDiscountAmount = () => totals?.discountAmount || 0;
+  const getDiscountAmount = () => {
+  if (totals?.discountAmount !== undefined) {
+    return totals.discountAmount;
+  }
+  return 0;
+};
 
   const getTotalAmount = () => {
-    if (totals?.total >= 0) return totals.total;
-    return Math.max(0, getSubtotal() - getDiscountAmount());
-  };
-
+  // Check if totals exist and are valid
+  if (totals?.total !== undefined && totals?.total >= 0) {
+    return totals.total;
+  }
+  
+  // Fallback: Calculate manually
+  return Math.max(0, getSubtotal() - getDiscountAmount());
+};
   // Fetch popular deals from API, excluding items already in cart
   useEffect(() => {
     const fetchDeals = async () => {
@@ -1063,14 +1105,15 @@ const Cart = () => {
             >
               ✕
             </button>
-            <SignIn
-              isOpen={true}
-              onClose={() => {
-                setShowSignIn(false);
-                if (auth.isAuthenticated) {
-                  navigate("/checkout");
+            <SignIn 
+              isOpen={showSignIn} 
+              onClose={() => { 
+                setShowSignIn(false); 
+                if (proceedAfterLogin && auth.isAuthenticated) {
+                  navigate('/checkout');
+                  setProceedAfterLogin(false);
                 }
-              }}
+              }} 
               initialMode="login"
             />
           </div>
