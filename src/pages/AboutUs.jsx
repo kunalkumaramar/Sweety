@@ -13,7 +13,7 @@ const AboutUs = () => {
               {/* Main profile image */}
               <div className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-full overflow-hidden border-4 sm:border-6 lg:border-8 border-white shadow-xl pt-10">
                 <img 
-                  src="https://res.cloudinary.com/dwqyjytaw/image/upload/v1759745924/LOGO_jiupar.png" 
+                  src="https://res.cloudinary.com/dh7d6iho8/image/upload/v1763038145/brand-logo_c8kiet.png" 
                   alt="About Us" 
                   className="w-fit object-cover p-5 sm:p-6 lg:p-7"
                 />

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-import logo from "/favicon.png"
+import logo from "/brand-logo.png"
 
 const SweetyIntimatesLanding = () => {
   const heroRef = useRef(null);
