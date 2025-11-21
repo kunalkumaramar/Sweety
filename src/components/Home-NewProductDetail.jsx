@@ -51,85 +51,131 @@ const HomeProductDetailSection = () => {
   }, [products]);
 
   const handleBuyNow = async () => {
-    if (!latestProduct || !selectedColor || !selectedSize) return;
-    setAddingToCart(true);
-    try {
-      const currentImages = selectedColor?.images || [];
-      const selectedImage =
-        currentImages[currentImageIndex] || currentImages[0] || '';
-      const result = await addToCartHandler(
-        latestProduct,
-        quantity,
-        selectedColor.colorName,
-        selectedSize,
-        selectedImage
-      );
-      if (result.success) navigate('/checkout');
-    } catch (error) {
-      console.error('Buy Now failed:', error);
-    } finally {
-      setAddingToCart(false);
+  if (!latestProduct || !selectedColor || !selectedSize) return;
+  setAddingToCart(true);
+  try {
+    const currentImages = selectedColor?.images || [];
+    const selectedImage =
+      currentImages[currentImageIndex] || currentImages[0] || '';
+
+    // ⭐ Pixel: InitiateCheckout
+    if (typeof window.fbq !== "undefined") {
+      window.fbq("track", "InitiateCheckout", {
+        content_ids: [latestProduct._id],
+        value: latestProduct.price * quantity,
+        currency: "INR"
+      });
     }
-  };
+
+    const result = await addToCartHandler(
+      latestProduct,
+      quantity,
+      selectedColor.colorName,
+      selectedSize,
+      selectedImage
+    );
+
+    if (result.success) navigate('/checkout');
+  } catch (error) {
+    console.error('Buy Now failed:', error);
+  } finally {
+    setAddingToCart(false);
+  }
+};
+
 
   const handleAddToCart = async () => {
-    if (!latestProduct || !selectedColor || !selectedSize) return;
-    setAddingToCart(true);
-    try {
-      const currentImages = selectedColor?.images || [];
-      const selectedImage =
-        currentImages[currentImageIndex] || currentImages[0] || '';
-      const result = await addToCartHandler(
-        latestProduct,
-        quantity,
-        selectedColor.colorName,
-        selectedSize,
-        selectedImage
-      );
-      if (result.success) console.log('Added to cart');
-    } catch (error) {
-      console.error('Add to cart failed:', error);
-    } finally {
-      setAddingToCart(false);
+  if (!latestProduct || !selectedColor || !selectedSize) return;
+  setAddingToCart(true);
+  try {
+    const currentImages = selectedColor?.images || [];
+    const selectedImage =
+      currentImages[currentImageIndex] || currentImages[0] || '';
+
+    // ⭐ Pixel: AddToCart
+    if (typeof window.fbq !== "undefined") {
+      window.fbq("track", "AddToCart", {
+        content_ids: [latestProduct._id],
+        content_name: latestProduct.name,
+        value: latestProduct.price,
+        currency: "INR"
+      });
     }
-  };
+
+    const result = await addToCartHandler(
+      latestProduct,
+      quantity,
+      selectedColor.colorName,
+      selectedSize,
+      selectedImage
+    );
+    if (result.success) console.log('Added to cart');
+  } catch (error) {
+    console.error('Add to cart failed:', error);
+  } finally {
+    setAddingToCart(false);
+  }
+};
+
 
   const handleWishlistToggle = async () => {
-    if (!latestProduct) return;
-    setAddingToWishlist(true);
-    try {
-      if (isInWishlist) {
-        await removeFromWishlist(latestProduct._id);
-      } else {
-        const productForWishlist = {
-          _id: latestProduct._id,
-          id: latestProduct._id,
-          name: latestProduct.name,
-          brand: latestProduct.name,
-          price: latestProduct.price,
-          originalPrice: latestProduct.originalPrice,
-          image: selectedColor?.images?.[0] || latestProduct.images?.[0] || '',
-          images: latestProduct.images || [],
-          description: latestProduct.description
-        };
-        await addToWishlist(productForWishlist);
-      }
-    } catch (error) {
-      console.error('Wishlist update failed:', error);
-    } finally {
-      setAddingToWishlist(false);
-    }
-  };
+  if (!latestProduct) return;
+  setAddingToWishlist(true);
 
-  const handleColorChange = (colorIndex) => {
-    setSelectedColorIndex(colorIndex);
-    setCurrentImageIndex(0);
-    const newColor = latestProduct.colors[colorIndex];
-    if (newColor.sizeStock) {
-      const availableSize = newColor.sizeStock.find(size => size.stock > 0);
-      setSelectedSize(availableSize?.size || "");
+  try {
+    if (isInWishlist) {
+      await removeFromWishlist(latestProduct._id);
+
+      // ⭐ Pixel: RemoveFromWishlist (custom)
+      if (typeof window.fbq !== "undefined") {
+        window.fbq("trackCustom", "RemoveFromWishlist", {
+          content_ids: [latestProduct._id],
+          content_name: latestProduct.name
+        });
+      }
+
+    } else {
+      const productForWishlist = {
+        _id: latestProduct._id,
+        id: latestProduct._id,
+        name: latestProduct.name,
+        brand: latestProduct.name,
+        price: latestProduct.price,
+        originalPrice: latestProduct.originalPrice,
+        image: selectedColor?.images?.[0] || latestProduct.images?.[0] || "",
+        images: latestProduct.images || [],
+        description: latestProduct.description
+      };
+
+      await addToWishlist(productForWishlist);
+
+      // ⭐ Pixel: AddToWishlist
+      if (typeof window.fbq !== "undefined") {
+        window.fbq("track", "AddToWishlist", {
+          content_ids: [latestProduct._id],
+          content_name: latestProduct.name,
+          value: latestProduct.price,
+          currency: "INR"
+        });
+      }
     }
-  };
+  } catch (error) {
+    console.error("Wishlist update failed:", error);
+  } finally {
+    setAddingToWishlist(false);
+  }
+};
+
+
+  // const handleColorChange = (colorIndex) => {
+  //   setSelectedColorIndex(colorIndex);
+  //   setCurrentImageIndex(0);
+  //   const newColor = latestProduct.colors[colorIndex];
+  //   if (newColor.sizeStock) {
+  //     const availableSize = newColor.sizeStock.find(size => size.stock > 0);
+  //     setSelectedSize(availableSize?.size || "");
+  //   }
+  // };
 
   const handleViewFullDetails = () => {
     if (latestProduct) navigate(`/product/${latestProduct._id}`);

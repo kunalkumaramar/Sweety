@@ -263,106 +263,146 @@ const ProductDetail = () => {
 
   // Handle Buy It Now
   const handleBuyNow = async () => {
-    if (!currentProduct || !selectedColor || !selectedSize) return;
+  if (!currentProduct || !selectedColor || !selectedSize) return;
 
-    setAddingToCart(true);
+  setAddingToCart(true);
 
-    try {
-      const currentImages = selectedColor?.images || [];
-      const selectedImage =
-        currentImages[currentImageIndex] || currentImages[0] || "";
+  try {
+    const currentImages = selectedColor?.images || [];
+    const selectedImage =
+      currentImages[currentImageIndex] || currentImages[0] || "";
 
-      const result = await addToCartHandler(
-        currentProduct,
-        quantity,
-        selectedColor.colorName,
-        selectedSize,
-        selectedImage
-      );
-
-      if (result.success) {
-        navigate("/checkout");
-      } else {
-        console.error("Failed to add to cart for Buy Now");
-      }
-    } catch (error) {
-      console.error("Failed to add to cart for Buy Now:", error);
-    } finally {
-      setAddingToCart(false);
+    // ⭐ Pixel Event — InitiateCheckout
+    if (typeof window.fbq !== "undefined") {
+      window.fbq("track", "InitiateCheckout", {
+        content_ids: [currentProduct._id],
+        value: currentProduct.price * quantity,
+        currency: "INR",
+      });
     }
-  };
+
+    const result = await addToCartHandler(
+      currentProduct,
+      quantity,
+      selectedColor.colorName,
+      selectedSize,
+      selectedImage
+    );
+
+    if (result.success) {
+      navigate("/checkout");
+    }
+  } catch (error) {
+    console.error("Failed to add to cart for Buy Now:", error);
+  } finally {
+    setAddingToCart(false);
+  }
+};
+
 
   // Handle add to cart
   const handleAddToCart = async () => {
-    if (!currentProduct || !selectedColor || !selectedSize) return;
+  if (!currentProduct || !selectedColor || !selectedSize) return;
 
-    setAddingToCart(true);
+  setAddingToCart(true);
 
-    try {
-      const currentImages = selectedColor?.images || [];
-      const selectedImage =
-        currentImages[currentImageIndex] || currentImages[0] || "";
+  try {
+    const currentImages = selectedColor?.images || [];
+    const selectedImage =
+      currentImages[currentImageIndex] || currentImages[0] || "";
 
-      const result = await addToCartHandler(
-        currentProduct,
-        quantity,
-        selectedColor.colorName,
-        selectedSize,
-        selectedImage
-      );
-
-      if (result.success) {
-        console.log("Added to cart successfully");
-      }
-    } catch (error) {
-      console.error("Failed to add to cart:", error);
-    } finally {
-      setAddingToCart(false);
+    // ⭐ Pixel Event — AddToCart
+    if (typeof window.fbq !== "undefined") {
+      window.fbq("track", "AddToCart", {
+        content_ids: [currentProduct._id],
+        content_name: currentProduct.name,
+        value: currentProduct.price,
+        currency: "INR",
+      });
     }
-  };
+
+    const result = await addToCartHandler(
+      currentProduct,
+      quantity,
+      selectedColor.colorName,
+      selectedSize,
+      selectedImage
+    );
+
+    if (result.success) {
+      console.log("Added to cart successfully");
+    }
+  } catch (error) {
+    console.error("Failed to add to cart:", error);
+  } finally {
+    setAddingToCart(false);
+  }
+};
+
 
   // Handle wishlist toggle
-  const handleWishlistToggle = async () => {
-    if (!currentProduct) return;
+const handleWishlistToggle = async () => {
+  if (!currentProduct) return;
 
-    setAddingToWishlist(true);
+  setAddingToWishlist(true);
 
-    try {
-      if (isInWishlist) {
-        await removeFromWishlist(currentProduct._id);
-      } else {
-        const productForWishlist = {
-          _id: currentProduct._id,
-          id: currentProduct._id,
-          name: currentProduct.name,
-          brand: currentProduct.name,
-          price: currentProduct.price,
-          originalPrice: currentProduct.originalPrice,
-          image: selectedColor?.images?.[0] || currentProduct.images?.[0] || "",
-          images: currentProduct.images || [],
-          description: currentProduct.description,
-        };
+  try {
+    if (isInWishlist) {
+      await removeFromWishlist(currentProduct._id);
 
-        await addToWishlist(
-          productForWishlist,
-          selectedSize,              // Now passing "38"
-          selectedColor?.colorName,  // Now passing "Blue"
-          selectedColor?.colorHex,   // Now passing the hex color
-          currentImage               // Now passing the image
-        );
+      // ⭐ Pixel Event — Remove from Wishlist
+      if (typeof window.fbq !== "undefined") {
+        window.fbq("trackCustom", "RemoveFromWishlist", {
+          content_ids: [currentProduct._id],
+          content_name: currentProduct.name,
+        });
       }
-    } catch (error) {
-      console.error("Failed to update wishlist:", error);
-    } finally {
-      setAddingToWishlist(false);
+
+    } else {
+      const productForWishlist = {
+        _id: currentProduct._id,
+        id: currentProduct._id,
+        name: currentProduct.name,
+        brand: currentProduct.name,
+        price: currentProduct.price,
+        originalPrice: currentProduct.originalPrice,
+        image:
+          selectedColor?.images?.[0] || currentProduct.images?.[0] || "",
+        images: currentProduct.images || [],
+        description: currentProduct.description,
+      };
+
+      await addToWishlist(
+        productForWishlist,
+        selectedSize,
+        selectedColor?.colorName,
+        selectedColor?.colorHex,
+        currentImage
+      );
+
+      // ⭐ Pixel Event — Add to Wishlist
+      if (typeof window.fbq !== "undefined") {
+        window.fbq("track", "AddToWishlist", {
+          content_ids: [currentProduct._id],
+          content_name: currentProduct.name,
+          value: currentProduct.price,
+          currency: "INR",
+        });
+      }
     }
-  };
+  } catch (error) {
+    console.error("Failed to update wishlist:", error);
+  } finally {
+    setAddingToWishlist(false);
+  }
+};
+
 
   // Handle color selection
-  const handleColorChange = (colorIndex) => {
-    setSelectedColorIndex(colorIndex);
-    setCurrentImageIndex(0);
-  };
+  // const handleColorChange = (colorIndex) => {
+  //   setSelectedColorIndex(colorIndex);
+  //   setCurrentImageIndex(0);
+  // };
 
   // Similar products carousel
   const nextSimilarProducts = () => {
@@ -678,7 +718,7 @@ const ProductDetail = () => {
                 <img
                   src={currentImage || ""}
                   alt={`${currentProduct.name} - ${selectedColor?.colorName}`}
-                  className={`w-full h-[690px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in transition-opacity duration-300 ${loadedImages[currentImage] ? "opacity-100" : "opacity-0"}`}
+                  className={`w-full h-[690px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in ${loadedImages[currentImage] ? "opacity-100" : "opacity-0"}`}
                   loading="lazy"
                   onLoad={() => setLoadedImages(prev => ({...prev, [currentImage]: true}))}
                   style={{ transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%` }}
@@ -729,7 +769,7 @@ const ProductDetail = () => {
                 <img
                   src={currentImage || ""}
                   alt={`${currentProduct.name} - ${selectedColor?.colorName}`}
-                  className={`w-full h-[460px] md:h-[500px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in transition-opacity duration-300 ${loadedImages[currentImage] ? "opacity-100" : "opacity-0"}`}
+                  className={`w-full h-[460px] md:h-[500px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in ${loadedImages[currentImage] ? "opacity-100" : "opacity-0"}`}
                   loading="lazy"
                   onLoad={() => setLoadedImages(prev => ({...prev, [currentImage]: true}))}
                   style={{ transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%` }}

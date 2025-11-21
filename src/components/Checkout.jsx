@@ -402,75 +402,90 @@ const Checkout = () => {
   };
 
   // Handle place order
-  const handlePlaceOrder = async (e) => {
-    e.preventDefault();
+// Handle place order
+const handlePlaceOrder = async (e) => {
+  e.preventDefault();
 
-    if (!validateForm()) {
-      alert('Please fill all required fields correctly');
-      return;
+  if (!validateForm()) {
+    alert('Please fill all required fields correctly');
+    return;
+  }
+
+  if (!isAuthenticated) {
+    alert('Please login to place an order');
+    navigate('/login');
+    return;
+  }
+
+  try {
+    setIsProcessing(true);
+    dispatch(clearPaymentError());
+
+    // ⭐ Pixel Event — AddPaymentInfo
+    if (typeof window.fbq !== "undefined") {
+      window.fbq("track", "AddPaymentInfo", {
+        value: grandTotal,
+        currency: "INR",
+        num_items: cartItems.length,
+        contents: cartItems.map(item => ({
+          id: item.product?._id || item.productId,
+          quantity: item.quantity
+        }))
+      });
     }
 
-    if (!isAuthenticated) {
-      alert('Please login to place an order');
-      navigate('/login');
-      return;
+    const orderData = {
+      items: cartItems.map(item => ({
+        product: item.product?._id || item.productId,
+        quantity: item.quantity,
+        priceAtPurchase: item.product?.price || item.price,
+        color: item.color,
+        size: item.size,
+        productImage: item.selectedImage || item.product?.images?.[0] || item.image,
+        productName: item.product?.name || item.name
+      })),
+      shippingAddress: useSameAddress ? shippingAddress : shippingAddress,
+      billingAddress: useSameAddress ? shippingAddress : billingAddress,
+      paymentMethod,
+      notes: notes.trim(),
+      subtotal: totals.subtotal,
+      totalDiscountAmount: totals.discountAmount || 0,
+      shippingCharge: 0,
+      total: grandTotal
+    };
+
+    const orderResult = await dispatch(createOrder(orderData)).unwrap();
+    const orderId = orderResult.orderId || orderResult._id;
+    
+    if (!orderId) {
+      throw new Error('Order created but ID not found. Please contact support.');
     }
 
-    try {
-      setIsProcessing(true);
-      dispatch(clearPaymentError());
+    const paymentResult = await dispatch(initiatePayment({
+      orderId,
+      method: paymentMethod
+    })).unwrap();
 
-      const orderData = {
-        items: cartItems.map(item => ({
-          product: item.product?._id || item.productId,
-          quantity: item.quantity,
-          priceAtPurchase: item.product?.price || item.price,
-          color: item.color,
-          size: item.size,
-          productImage: item.selectedImage || item.product?.images?.[0] || item.image,
-          productName: item.product?.name || item.name
-        })),
-        shippingAddress: useSameAddress ? shippingAddress : shippingAddress,
-        billingAddress: useSameAddress ? shippingAddress : billingAddress,
-        paymentMethod,
-        notes: notes.trim(),
-        subtotal: totals.subtotal,
-        totalDiscountAmount: totals.discountAmount || 0,
-        shippingCharge: 0,
-        total: grandTotal
-      };
+    const razorpayOrderId = paymentResult.order?.id;
+    const razorpayKey = paymentResult.key;
 
-      const orderResult = await dispatch(createOrder(orderData)).unwrap();
-      const orderId = orderResult.orderId || orderResult._id;
-      
-      if (!orderId) {
-        throw new Error('Order created but ID not found. Please contact support.');
-      }
-
-      const paymentResult = await dispatch(initiatePayment({
+    if (paymentMethod === 'razorpay' && razorpayOrderId && razorpayKey) {
+      handleRazorpayPayment(
         orderId,
-        method: paymentMethod
-      })).unwrap();
-
-      const razorpayOrderId = paymentResult.order?.id;
-      const razorpayKey = paymentResult.key;
-
-      if (paymentMethod === 'razorpay' && razorpayOrderId && razorpayKey) {
-        handleRazorpayPayment(
-          orderId,
-          razorpayOrderId,
-          razorpayKey
-        );
-      } else {
-        throw new Error('Payment initialization incomplete');
-      }
-    } catch (error) {
-      console.error('Order placement failed:', error);
-      alert(error.message || 'Failed to place order. Please try again.');
-    } finally {
-      setIsProcessing(false);
+        razorpayOrderId,
+        razorpayKey
+      );
+    } else {
+      throw new Error('Payment initialization incomplete');
     }
-  };
+  } catch (error) {
+    console.error('Order placement failed:', error);
+    alert(error.message || 'Failed to place order. Please try again.');
+  } finally {
+    setIsProcessing(false);
+  }
+};
+
 
   // Calculate totals
   const subtotalAfterDiscount = totals.subtotal - (totals.discountAmount || 0);

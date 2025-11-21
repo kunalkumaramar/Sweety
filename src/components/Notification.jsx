@@ -29,11 +29,11 @@ const Notification = ({ message, type = 'success', onClose }) => {
   const getNotificationStyles = () => {
     switch (type) {
       case 'success':
-        return 'bg-green-500 text-white';
+        return 'bg-pink-500 text-white';
       case 'error':
         return 'bg-red-500 text-white';
       case 'info':
-        return 'bg-blue-500 text-white';
+        return 'bg-pink-500 text-white';
       default:
         return 'bg-gray-500 text-white';
     }
