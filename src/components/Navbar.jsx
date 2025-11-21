@@ -175,15 +175,25 @@ const Navbar = () => {
   };
 
   // Handle search submit
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim() !== "") {
-      dispatch(setSearchQuery(searchQuery.trim()));
-      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-      setIsSearchDropdownOpen(false);
-      setSearchQueryState("");
+const handleSearch = (e) => {
+  e.preventDefault();
+
+  if (searchQuery.trim() !== "") {
+
+    // ⭐ Pixel Event — Search
+    if (typeof window.fbq !== "undefined") {
+      window.fbq("track", "Search", {
+        search_string: searchQuery.trim()
+      });
     }
-  };
+
+    dispatch(setSearchQuery(searchQuery.trim()));
+    navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    setIsSearchDropdownOpen(false);
+    setSearchQueryState("");
+  }
+};
+
 
   // Handle search input change
   const handleInputChange = (e) => {
