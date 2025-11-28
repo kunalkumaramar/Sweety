@@ -10,6 +10,8 @@ import {
   validateDiscountAsync,
   applyDiscountAsync,
   removeDiscountAsync,
+  applyGuestDiscountAsync,
+  removeGuestDiscountAsync,
 } from "../Redux/slices/cartSlice";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -428,7 +430,7 @@ const CouponSection = ({
       <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
         <div className="flex flex-col">
           <span className="text-green-600 text-sm font-medium">
-            ✓ Discount Applied
+            Discount Applied
           </span>
           <span className="text-green-700 text-xs">
             {appliedDiscount.code} - ₹
@@ -460,14 +462,9 @@ const CouponSection = ({
             setShowCouponInput(true);
             setError("");
           }}
-          disabled={!isAuthenticated}
-          className={`w-full py-3 rounded-3xl text-sm font-semibold transition-colors ${
-            isAuthenticated
-              ? "bg-white border border-pink-300 text-pink-600 hover:bg-pink-50"
-              : "bg-gray-200 border border-gray-300 text-gray-500 cursor-not-allowed"
-          }`}
+          className="w-full py-3 rounded-3xl text-sm font-semibold transition-colors bg-white border border-pink-300 text-pink-600 hover:bg-pink-50"
         >
-          {isAuthenticated ? "Add Coupon" : "Sign Up to Add Coupon"}
+          Add Coupon {/* Remove the guest restriction */}
         </button>
       ) : (
         <div className="flex gap-2">
@@ -479,13 +476,10 @@ const CouponSection = ({
               setError("");
             }}
             placeholder="Enter coupon code"
-            disabled={!isAuthenticated}
-            className={`flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 ${
-              isAuthenticated
-                ? "border-pink-300 focus:ring-pink-200"
-                : "bg-gray-100 border-gray-300 cursor-not-allowed"
-            }`}
-            onKeyPress={(e) => e.key === "Enter" && handleApplyCoupon()}
+            className="flex-1 px-3 py-2 border border-pink-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-200"
+            onKeyPress={(e) => {
+              if (e.key === "Enter") handleApplyCoupon();
+            }}
           />
           <button
             onClick={handleApplyCoupon}
@@ -540,26 +534,21 @@ const Cart = () => {
   const handleProceedToBuy = async () => {
     if (!cartItems.length) return;
 
-    // ⭐ Fire Pixel Event: InitiateCheckout
+    // Fire Pixel Event: InitiateCheckout
     if (typeof window.fbq !== "undefined") {
       window.fbq("track", "InitiateCheckout", {
-        value: getTotalAmount(), // total cart value
-        num_items: getTotalItems(),
+        value: getTotalAmount,
+        num_items: getTotalItems,
         currency: "INR",
         contents: cartItems.map((item) => ({
-          id: item.product?._id || item._id,
+          id: item.product?.id || item.id,
           quantity: item.quantity || 1,
         })),
       });
     }
 
-    const token = localStorage.getItem("token");
-    if (!token && !auth.isAuthenticated) {
-      setProceedAfterLogin(true);
-      setShowSignIn(true);
-    } else {
-      navigate("/checkout");
-    }
+    // Always proceed to checkout (guest or authenticated)
+    navigate("/checkout");
   };
 
   const { addToWishlist } = useWishlist();
@@ -697,13 +686,28 @@ const Cart = () => {
     }
 
     const cacheKey = "cart_raw_deals";
-    // Filter out cart items and limit to 6
+
+    // Filter out cart items
     const cartProductIds = cartItems.map(
       (item) => item.product?._id || item.productId
     );
-    const filteredProducts = rawDeals
-      .filter((product) => !cartProductIds.includes(product._id))
-      .slice(0, 6);
+
+    // ✅ REMOVE DUPLICATES by tracking seen product IDs
+    const seenIds = new Set();
+    const uniqueDeals = rawDeals.filter((product) => {
+      // Skip if already in cart
+      if (cartProductIds.includes(product._id)) return false;
+
+      // Skip if we've already seen this product ID
+      if (seenIds.has(product._id)) return false;
+
+      // Add to seen set and include this product
+      seenIds.add(product._id);
+      return true;
+    });
+
+    // Limit to 6 unique products
+    const filteredProducts = uniqueDeals.slice(0, 6);
 
     setDeals(filteredProducts);
 
@@ -713,45 +717,39 @@ const Cart = () => {
   }, [rawDeals, cartItems]);
 
   const handleApplyDiscount = async (code) => {
-    if (!isAuthenticated) {
-      showNotification("Please sign up to apply coupons", "error");
-      navigate("/signup");
-      return { success: false, error: "Not authenticated" };
-    }
-
     if (!code.trim()) {
       showNotification("Please enter a discount code", "error");
       return { success: false, error: "Please enter a discount code" };
     }
 
     try {
-      // Get all product IDs from cart
-      const productIds = items.map(
-        (item) => item.product?._id || item.productId
-      );
+      let result;
 
-      // First validate if discount can be used
-      const validationResult = await dispatch(
-        validateDiscountAsync({
-          code: code.trim(),
-          productIds,
-        })
-      ).unwrap();
+      if (isAuthenticated) {
+        // For authenticated users - validate first, then apply
+        const productIds = items.map(
+          (item) => item.product?.id || item.productId
+        );
 
-      // Check the nested canUse
-      if (!validationResult?.data?.canUse) {
-        const errorMessage =
-          validationResult?.data?.message || "Invalid discount code";
-        throw new Error(errorMessage);
+        const validationResult = await dispatch(
+          validateDiscountAsync({ code: code.trim(), productIds })
+        ).unwrap();
+
+        if (!validationResult?.data?.canUse) {
+          const errorMessage =
+            validationResult?.data?.message || "Invalid discount code";
+          throw new Error(errorMessage);
+        }
+
+        result = await dispatch(
+          applyDiscountAsync({ code: code.trim(), type: "coupon" })
+        ).unwrap();
+      } else {
+        // For guest users - directly apply (validation happens on backend)
+        result = await dispatch(
+          applyGuestDiscountAsync({ code: code.trim(), type: "coupon" })
+        ).unwrap();
       }
-
-      // If validation passes (assuming canUse: true), apply the discount
-      const result = await dispatch(
-        applyDiscountAsync({
-          code: code.trim(),
-          type: "coupon",
-        })
-      ).unwrap();
 
       const discountAmount =
         result.appliedCoupon?.discountAmount ||
@@ -764,9 +762,7 @@ const Cart = () => {
       );
       return { success: true, result };
     } catch (error) {
-      // Handle validation errors
-      const errorMessage =
-        typeof error === "string" ? error : error.message || "";
+      const errorMessage = typeof error === "string" ? error : error.message;
 
       if (errorMessage.toLowerCase().includes("already used")) {
         showNotification("You have already used this discount code", "error");
@@ -787,12 +783,17 @@ const Cart = () => {
 
   const handleRemoveDiscount = async () => {
     try {
-      await dispatch(removeDiscountAsync()).unwrap();
+      // Use different thunk based on authentication status
+      if (isAuthenticated) {
+        await dispatch(removeDiscountAsync()).unwrap();
+      } else {
+        await dispatch(removeGuestDiscountAsync()).unwrap();
+      }
+
       showNotification("Discount removed successfully", "info");
       return { success: true };
     } catch (error) {
-      const errorMessage =
-        typeof error === "string" ? error : error.message || "";
+      const errorMessage = typeof error === "string" ? error : error.message;
       showNotification("Failed to remove discount", "error");
       return { success: false, error: errorMessage };
     }
@@ -933,7 +934,9 @@ const Cart = () => {
             ) : (
               cartItems.map((item) => (
                 <CartItem
-                  key={item._id}
+                  key={`${item.product?._id || item._id}-${item.size}-${
+                    item.color?.colorName || "default"
+                  }`}
                   item={item}
                   updateQuantity={updateItemQuantity}
                   deleteItem={deleteItem}
@@ -1033,7 +1036,9 @@ const Cart = () => {
               ) : (
                 cartItems.map((item) => (
                   <CartItem
-                    key={item._id}
+                    key={`${item.product?._id || item._id}-${item.size}-${
+                      item.color?.colorName || "default"
+                    }`}
                     item={item}
                     updateQuantity={updateItemQuantity}
                     deleteItem={deleteItem}

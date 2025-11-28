@@ -1,92 +1,115 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, forwardRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  forwardRef,
+} from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // Cloudinary Image Optimization Component
-const CloudinaryImage = forwardRef(({ 
-  src, 
-  alt, 
-  className, 
-  priority = false, 
-  thumbnail = false, 
-  sizes = '100vw',
-  ...props 
-}, ref) => {
-  const [isMobile] = useState(window.innerWidth < 768);
+const CloudinaryImage = forwardRef(
+  (
+    {
+      src,
+      alt,
+      className,
+      priority = false,
+      thumbnail = false,
+      sizes = "100vw",
+      ...props
+    },
+    ref
+  ) => {
+    const [isMobile] = useState(window.innerWidth < 768);
 
-  // Determine optimal width for src fallback
-  const getOptimalWidth = () => {
-    if (thumbnail) return 150;
-    if (priority) return isMobile ? 800 : 1200;
-    return isMobile ? 400 : 600; // Adjusted for product cards
-  };
+    // Determine optimal width for src fallback
+    const getOptimalWidth = () => {
+      if (thumbnail) return 150;
+      if (priority) return isMobile ? 800 : 1200;
+      return isMobile ? 400 : 600; // Adjusted for product cards
+    };
 
-  const getQuality = () => {
-    if (thumbnail) return 'auto:low';
-    return priority ? 'auto:best' : 'auto:eco';
-  };
+    const getQuality = () => {
+      if (thumbnail) return "auto:low";
+      return priority ? "auto:best" : "auto:eco";
+    };
 
-  const optimizeUrl = (url) => {
-    if (!url?.includes('cloudinary.com')) return url;
-   
-    const parts = url.match(/(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
-    if (!parts) return url;
-   
-    const [, base, , ver, path, query] = parts;
-    const width = getOptimalWidth();
-    const quality = getQuality();
-    const newTransforms = `f_auto,q_${quality},w_${width},c_limit`;
-   
-    return `${base}${newTransforms}/v${ver}/${path}${query || ''}`;
-  };
+    const optimizeUrl = (url) => {
+      if (!url?.includes("cloudinary.com")) return url;
 
-  // Generate srcSet for responsive images
-  const generateSrcSet = () => {
-    if (thumbnail || !src?.includes('cloudinary.com')) return undefined;
-   
-    const parts = src.match(/(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
-    if (!parts) return undefined;
-   
-    const [, base, , ver, path, query] = parts;
-    const q = 'auto:eco';
-   
-    let srcSetWidths;
-    if (priority) {
-      srcSetWidths = isMobile ? [400, 800, 1200] : [600, 1200, 1920];
-    } else {
-      srcSetWidths = isMobile ? [200, 400] : [400, 600];
-    }
-   
-    return srcSetWidths
-      .map(w => `${base}f_auto,q_${q},w_${w},c_limit/v${ver}/${path}${query || ''} ${w}w`)
-      .join(', ');
-  };
+      const parts = url.match(
+        /(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/
+      );
+      if (!parts) return url;
 
-  return (
-    <img
-      ref={ref}
-      src={optimizeUrl(src)}
-      srcSet={generateSrcSet()}
-      sizes={sizes}
-      alt={alt}
-      className={className}
-      loading={priority ? 'eager' : 'lazy'}
-      fetchPriority={priority ? 'high' : undefined}
-      {...props}
-    />
-  );
-});
+      const [, base, , ver, path, query] = parts;
+      const width = getOptimalWidth();
+      const quality = getQuality();
+      const newTransforms = `f_auto,q_${quality},w_${width},c_limit`;
+
+      return `${base}${newTransforms}/v${ver}/${path}${query || ""}`;
+    };
+
+    // Generate srcSet for responsive images
+    const generateSrcSet = () => {
+      if (thumbnail || !src?.includes("cloudinary.com")) return undefined;
+
+      const parts = src.match(
+        /(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/
+      );
+      if (!parts) return undefined;
+
+      const [, base, , ver, path, query] = parts;
+      const q = "auto:eco";
+
+      let srcSetWidths;
+      if (priority) {
+        srcSetWidths = isMobile ? [400, 800, 1200] : [600, 1200, 1920];
+      } else {
+        srcSetWidths = isMobile ? [200, 400] : [400, 600];
+      }
+
+      return srcSetWidths
+        .map(
+          (w) =>
+            `${base}f_auto,q_${q},w_${w},c_limit/v${ver}/${path}${
+              query || ""
+            } ${w}w`
+        )
+        .join(", ");
+    };
+
+    return (
+      <img
+        ref={ref}
+        src={optimizeUrl(src)}
+        srcSet={generateSrcSet()}
+        sizes={sizes}
+        alt={alt}
+        className={className}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : undefined}
+        {...props}
+      />
+    );
+  }
+);
 
 // Helper function to get optimized URL (extracted for preload use)
 const getOptimizedUrl = (url, isMobile, width = 400) => {
-  if (!url?.includes('cloudinary.com')) return url;
- 
-  const parts = url.match(/(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/);
+  if (!url?.includes("cloudinary.com")) return url;
+
+  const parts = url.match(
+    /(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/
+  );
   if (!parts) return url;
- 
+
   const [, base, , ver, path, query] = parts;
   const newTransforms = `f_auto,q_auto:eco,w_${width},c_limit`;
- 
-  return `${base}${newTransforms}/v${ver}/${path}${query || ''}`;
+
+  return `${base}${newTransforms}/v${ver}/${path}${query || ""}`;
 };
 
 const CircularProductCard = React.memo(
@@ -102,7 +125,7 @@ const CircularProductCard = React.memo(
       const z = Math.cos(angle) * radius;
       const scale =
         z > 0 ? 1 : Math.max(isMobile ? 0.7 : 0.7, 0.7 + (z / radius) * 0.3); // Slightly larger min scale on mobile
-      const opacity = isMainCard ? 1 : (isMobile ? 0.8 : 0.7); // Higher opacity on mobile to reduce flicker
+      const opacity = isMainCard ? 1 : isMobile ? 0.8 : 0.7; // Higher opacity on mobile to reduce flicker
       const tiltY = isMainCard ? 0 : x > 0 ? -10 : 10; // Reduced tilt on mobile
 
       return {
@@ -114,7 +137,8 @@ const CircularProductCard = React.memo(
       };
     }, [index, currentIndex, totalItems, isMainCard, isMobile]);
 
-    const imageSrc = product.colors?.[0]?.images?.[0] ||
+    const imageSrc =
+      product.colors?.[0]?.images?.[0] ||
       product.images?.[0] ||
       "/placeholder.png";
 
@@ -133,7 +157,12 @@ const CircularProductCard = React.memo(
       >
         <div className="bg-[#f9e2e7] overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-2">
           <div className="sm:p-4">
-            <div className="bg-white p-1 relative overflow-hidden" style={{ aspectRatio: '1 / 1.2' }}> {/* Reserve space for CLS */}
+            <div
+              className="bg-white p-1 relative overflow-hidden"
+              style={{ aspectRatio: "1 / 1.2" }}
+            >
+              {" "}
+              {/* Reserve space for CLS */}
               {!loaded && (
                 <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -142,7 +171,9 @@ const CircularProductCard = React.memo(
               <CloudinaryImage
                 src={imageSrc}
                 alt={product.name}
-                className={`w-full h-full object-contain transition-all duration-300 hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+                className={`w-full h-full object-contain transition-all duration-300 hover:scale-105 ${
+                  loaded ? "opacity-100" : "opacity-0"
+                }`}
                 priority={index === 0} // Only prioritize first card
                 sizes={cardSizes}
                 onLoad={() => setLoaded(true)}
@@ -162,11 +193,12 @@ const CircularProductCard = React.memo(
               <p className="text-sm sm:text-base font-bold text-pink-600">
                 ₹{product.price?.toLocaleString("en-IN")}
               </p>
-              {product.originalPrice && product.originalPrice > product.price && (
-                <p className="text-xs text-gray-500 line-through">
-                  ₹{product.originalPrice?.toLocaleString("en-IN")}
-                </p>
-              )}
+              {product.originalPrice &&
+                product.originalPrice > product.price && (
+                  <p className="text-xs text-gray-500 line-through">
+                    ₹{product.originalPrice?.toLocaleString("en-IN")}
+                  </p>
+                )}
             </div>
           </div>
         </div>
@@ -220,77 +252,89 @@ const FeaturedProducts = () => {
   }, []);
 
   // Fetch products
+  // Fetch products - OPTIMIZED VERSION
   useEffect(() => {
     const fetchFeaturedProducts = async () => {
       try {
         setLoading(true);
+
+        // ✅ Fetch ALL products at once with pagination
+        const productsRes = await fetch(
+          `${API_BASE_URL}/product?page=1&limit=50&isActive=true`
+        );
+        const productsData = await productsRes.json();
+        const allProducts = productsData.data?.products || [];
+
+        if (allProducts.length === 0) {
+          setRawFeaturedProducts([]);
+          setError(null);
+          setLoading(false);
+          return;
+        }
+
+        // ✅ Fetch categories only once
         const categoriesRes = await fetch(`${API_BASE_URL}/category`);
         const categoriesData = await categoriesRes.json();
         const categories = categoriesData.data || [];
 
-        // Fetch all subcategories for all categories in parallel
-        const categoryWithSubcatsPromises = categories.map(async (category) => {
-          const subcategoriesRes = await fetch(
-            `${API_BASE_URL}/sub-category/category/${category._id}`
-          );
-          const subcategoriesData = await subcategoriesRes.json();
-          const subcategories = subcategoriesData.data || [];
-          return { category, subcategories };
-        });
+        // Create category/subcategory lookup map
+        const categoryMap = new Map();
+        const subcategoryMap = new Map();
 
-        const categoryWithSubcats = await Promise.all(categoryWithSubcatsPromises);
+        // ✅ Fetch all subcategories in parallel (one request per category)
+        const subcategoryPromises = categories.map(async (category) => {
+          categoryMap.set(category._id, category.name);
 
-        // Now fetch products from all subcategories and categories in parallel
-        const productPromises = [];
+          try {
+            const subcategoriesRes = await fetch(
+              `${API_BASE_URL}/sub-category/category/${category._id}`
+            );
+            const subcategoriesData = await subcategoriesRes.json();
+            const subcategories = subcategoriesData.data || [];
 
-        for (const { category, subcategories } of categoryWithSubcats) {
-          if (subcategories.length > 0) {
-            // Add promises for each subcategory product
-            for (const subcategory of subcategories) {
-              productPromises.push(
-                fetch(`${API_BASE_URL}/product/subcategory/${subcategory._id}?page=1&limit=1&isActive=true`)
-                  .then((res) => res.json())
-                  .then((data) => {
-                    const latestProduct = data.data?.products?.[0];
-                    if (latestProduct) {
-                      return {
-                        ...latestProduct,
-                        categoryName: category.name,
-                        subcategoryName: subcategory.name,
-                      };
-                    }
-                    return null;
-                  })
-                  .catch(() => null)
-              );
-            }
-          } else {
-            // Add promise for category product (if no subcategories)
-            productPromises.push(
-              fetch(`${API_BASE_URL}/product/category/${category._id}?page=1&limit=1&isActive=true`)
-                .then((res) => res.json())
-                .then((data) => {
-                  const latestProduct = data.data?.products?.[0];
-                  if (latestProduct) {
-                    return {
-                      ...latestProduct,
-                      categoryName: category.name,
-                      subcategoryName: null,
-                    };
-                  }
-                  return null;
-                })
-                .catch(() => null)
+            subcategories.forEach((subcat) => {
+              subcategoryMap.set(subcat._id, {
+                name: subcat.name,
+                categoryName: category.name,
+              });
+            });
+          } catch (err) {
+            console.error(
+              `Failed to fetch subcategories for ${category.name}`,
+              err
             );
           }
-        }
+        });
 
-        // Wait for all product fetches to complete
-        const allProducts = await Promise.all(productPromises);
-        const products = allProducts.filter((p) => p !== null);
+        await Promise.all(subcategoryPromises);
 
-        console.log(`Fetched ${products.length} total products from ${productPromises.length} requests`);
-        setRawFeaturedProducts(products);
+        // ✅ Enrich products with category/subcategory names
+        const enrichedProducts = allProducts.map((product) => ({
+          ...product,
+          categoryName: categoryMap.get(product.category) || "Unknown",
+          subcategoryName:
+            subcategoryMap.get(product.subcategory)?.name || null,
+        }));
+
+        // ✅ Remove duplicates and shuffle for variety
+        const seenIds = new Set();
+        const uniqueProducts = enrichedProducts.filter((product) => {
+          if (seenIds.has(product._id)) return false;
+          seenIds.add(product._id);
+          return true;
+        });
+
+        // ✅ Shuffle to show different products each time
+        const shuffled = uniqueProducts.sort(() => Math.random() - 0.5);
+
+        // ✅ Take first 20 products for the carousel
+        const featuredSelection = shuffled.slice(0, 20);
+
+        console.log(
+          `Fetched ${allProducts.length} products, showing ${featuredSelection.length} unique featured products`
+        );
+
+        setRawFeaturedProducts(featuredSelection);
         setError(null);
       } catch (err) {
         console.error("Error fetching featured products:", err);
@@ -301,8 +345,19 @@ const FeaturedProducts = () => {
       }
     };
 
-    // Always fetch fresh data - remove cache to see all products
-    fetchFeaturedProducts();
+    // Check cache first
+    const cacheKey = "featured_raw_products";
+    const cached = localStorage.getItem(cacheKey);
+    const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+    const now = Date.now();
+    const cacheExpiry = 3600000; // 1 hour
+
+    if (cached && cacheTime && now - parseInt(cacheTime) < cacheExpiry) {
+      setRawFeaturedProducts(JSON.parse(cached));
+      setLoading(false);
+    } else {
+      fetchFeaturedProducts();
+    }
   }, [API_BASE_URL]);
 
   useEffect(() => {
@@ -310,26 +365,40 @@ const FeaturedProducts = () => {
       setFeaturedProducts([]);
       return;
     }
+
     const cacheKey = "featured_raw_products";
-    setFeaturedProducts(rawFeaturedProducts);
-    localStorage.setItem(cacheKey, JSON.stringify(rawFeaturedProducts));
+
+    // ✅ REMOVE DUPLICATES by tracking seen product IDs
+    const seenIds = new Set();
+    const uniqueProducts = rawFeaturedProducts.filter((product) => {
+      // Skip if we've already seen this product ID
+      if (seenIds.has(product._id)) return false;
+
+      // Add to seen set and include this product
+      seenIds.add(product._id);
+      return true;
+    });
+
+    setFeaturedProducts(uniqueProducts);
+    localStorage.setItem(cacheKey, JSON.stringify(uniqueProducts));
     localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
   }, [rawFeaturedProducts]);
 
   // Preload the first product image if mobile (for LCP optimization)
   useEffect(() => {
     if (isMobile && featuredProducts.length > 0) {
-      const firstImage = featuredProducts[0].colors?.[0]?.images?.[0] ||
+      const firstImage =
+        featuredProducts[0].colors?.[0]?.images?.[0] ||
         featuredProducts[0].images?.[0];
       if (firstImage) {
         const preloadUrl = getOptimizedUrl(firstImage, isMobile, 400);
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.as = 'image';
-        link.fetchPriority = 'high';
+        const link = document.createElement("link");
+        link.rel = "preload";
+        link.as = "image";
+        link.fetchPriority = "high";
         link.href = preloadUrl;
         document.head.appendChild(link);
-       
+
         return () => document.head.removeChild(link);
       }
     }
@@ -368,9 +437,7 @@ const FeaturedProducts = () => {
       if (Math.abs(scrollAccumulator.current) >= threshold) {
         const direction = scrollAccumulator.current > 0 ? 1 : -1;
         setCurrentIndex((prev) =>
-          direction > 0
-            ? Math.min(prev + 1, total - 1)
-            : Math.max(prev - 1, 0)
+          direction > 0 ? Math.min(prev + 1, total - 1) : Math.max(prev - 1, 0)
         );
         scrollAccumulator.current = 0;
       }
@@ -425,25 +492,28 @@ const FeaturedProducts = () => {
     setTouchStartX(e.targetTouches[0].clientX);
   }, []);
 
-  const onTouchEnd = useCallback((e) => {
-    if (!touchStartX) return;
+  const onTouchEnd = useCallback(
+    (e) => {
+      if (!touchStartX) return;
 
-    const touchEndX = e.changedTouches[0].clientX;
-    const distance = touchStartX - touchEndX;
-    const minSwipeDistance = 50;
+      const touchEndX = e.changedTouches[0].clientX;
+      const distance = touchStartX - touchEndX;
+      const minSwipeDistance = 50;
 
-    if (Math.abs(distance) > minSwipeDistance) {
-      if (distance > 0) {
-        // Swipe left -> next
-        handleNext();
-      } else {
-        // Swipe right -> previous
-        handlePrevious();
+      if (Math.abs(distance) > minSwipeDistance) {
+        if (distance > 0) {
+          // Swipe left -> next
+          handleNext();
+        } else {
+          // Swipe right -> previous
+          handlePrevious();
+        }
       }
-    }
 
-    setTouchStartX(null);
-  }, [touchStartX, handleNext, handlePrevious]);
+      setTouchStartX(null);
+    },
+    [touchStartX, handleNext, handlePrevious]
+  );
 
   const progressWidth = `${((currentIndex + itemsPerPage) / total) * 100}%`;
 

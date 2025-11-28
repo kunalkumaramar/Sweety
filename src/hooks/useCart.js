@@ -1,6 +1,6 @@
-// src/hooks/useCart.js 
-import { useSelector, useDispatch } from 'react-redux';
-import { useCallback, useEffect } from 'react';
+// src/hooks/useCart.js
+import { useSelector, useDispatch } from "react-redux";
+import { useCallback, useEffect } from "react";
 import {
   setAuthenticated,
   addToCart,
@@ -16,12 +16,14 @@ import {
   applyDiscountAsync,
   removeDiscountAsync,
   clearErrors,
-  syncWithApiCart
-} from '../Redux/slices/cartSlice';
+  syncWithApiCart,
+  applyGuestDiscountAsync,
+  removeGuestDiscountAsync,
+} from "../Redux/slices/cartSlice";
 
 export const useCart = () => {
   const dispatch = useDispatch();
-  
+
   // Get all cart state from Redux
   const {
     items = [],
@@ -32,7 +34,7 @@ export const useCart = () => {
     totals,
     apiItems = [],
     isAuthenticated = false,
-    
+
     // Loading states
     loading = false,
     addingToCart = false,
@@ -43,7 +45,7 @@ export const useCart = () => {
     mergingCart = false,
     applyingDiscount = false,
     removingDiscount = false,
-    
+
     // Error states
     error,
     addError,
@@ -53,30 +55,30 @@ export const useCart = () => {
     validateError,
     mergeError,
     discountError,
-    
+
     // Discount state
     hasDiscount = false,
     appliedDiscount,
-    
+
     // Validation state
-    cartValidation
-  } = useSelector(state => state.cart || {});
+    cartValidation,
+  } = useSelector((state) => state.cart || {});
 
   // Check if user is authenticated and update store
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const authStatus = !!token;
       if (authStatus !== isAuthenticated) {
         dispatch(setAuthenticated(authStatus));
       }
     };
-    
+
     checkAuth();
-    
+
     // Listen for storage changes (user login/logout)
-    window.addEventListener('storage', checkAuth);
-    return () => window.removeEventListener('storage', checkAuth);
+    window.addEventListener("storage", checkAuth);
+    return () => window.removeEventListener("storage", checkAuth);
   }, [dispatch, isAuthenticated]);
 
   // Load cart details on mount and when auth status changes
@@ -87,204 +89,252 @@ export const useCart = () => {
   // Auto-merge cart when user logs in
   useEffect(() => {
     const handleAuthChange = async () => {
-      const sessionId = localStorage.getItem('guestSessionId');
+      const sessionId = localStorage.getItem("guestSessionId");
       if (isAuthenticated && sessionId) {
         await dispatch(mergeCartAsync(sessionId));
-        localStorage.removeItem('guestSessionId');
+        localStorage.removeItem("guestSessionId");
         dispatch(fetchCartDetails());
       }
     };
-    
+
     handleAuthChange();
   }, [isAuthenticated, dispatch]);
 
   // Add item to cart with enhanced parameters and better error handling
-  const addItemToCart = useCallback(async (product, quantity = 1, selectedColor = '', selectedSize = 'M', selectedImage = '') => {
-    try {
-      // Validate input
-      if (!product) {
-        throw new Error('Product is required');
+  const addItemToCart = useCallback(
+    async (
+      product,
+      quantity = 1,
+      selectedColor = "",
+      selectedSize = "M",
+      selectedImage = ""
+    ) => {
+      try {
+        // Validate input
+        if (!product) {
+          throw new Error("Product is required");
+        }
+
+        const productId = product.id || product._id;
+        if (!productId) {
+          throw new Error("Product ID is required");
+        }
+
+        // Ensure product has required fields with fallbacks
+        const productData = {
+          _id: productId,
+          name: product.name || product.brand || "Unknown Product",
+          price: product.price || 0,
+          originalPrice: product.originalPrice || product.price || 0,
+          images: Array.isArray(product.images)
+            ? product.images
+            : product.image
+            ? [product.image]
+            : [],
+          colors: Array.isArray(product.colors) ? product.colors : [],
+          description: product.description || "",
+          rating: product.rating || 0,
+        };
+
+        // Prepare color object based on product data
+        const colorObj =
+          selectedColor && productData.colors.length > 0
+            ? productData.colors.find(
+                (c) => c.colorName === selectedColor || c.name === selectedColor
+              ) || { colorName: selectedColor, colorHex: "#000000" }
+            : { colorName: selectedColor || "", colorHex: "#000000" };
+
+        // Use selected image or first available image
+        const imageUrl =
+          selectedImage ||
+          (productData.images.length > 0 ? productData.images[0] : "") ||
+          "";
+
+        // Immediate UI feedback
+        dispatch(
+          addToCart({
+            product: productData,
+            size: selectedSize.toLowerCase(),
+            quantity: Math.max(1, quantity),
+            color: colorObj,
+            selectedImage: imageUrl,
+          })
+        );
+
+        // API call
+        await dispatch(
+          addToCartAsync({
+            productId: productData._id,
+            quantity: Math.max(1, quantity),
+            size: selectedSize.toLowerCase(),
+            color: colorObj,
+            selectedImage: imageUrl,
+          })
+        ).unwrap();
+
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to add to cart:", error);
+        // Remove from local state if API call failed
+        const productId = product?.id || product?._id;
+        if (productId) {
+          dispatch(
+            removeFromCart({
+              productId,
+              size: selectedSize.toLowerCase(),
+              colorName: selectedColor,
+            })
+          );
+        }
+        return {
+          success: false,
+          error: error.message || "Failed to add item to cart",
+        };
+      }
+    },
+    [dispatch]
+  );
+
+  // Update item quantity by item ID with better error handling and live subtotal update
+  const updateItemQuantity = useCallback(
+    async (itemId, newQuantity) => {
+      if (!itemId) {
+        console.error("Item ID is required");
+        return { success: false, error: "Item ID is required" };
       }
 
-      const productId = product.id || product._id;
-      if (!productId) {
-        throw new Error('Product ID is required');
+      const item = items.find((item) => item._id === itemId);
+
+      if (!item) {
+        console.error("Item not found in cart");
+        return { success: false, error: "Item not found" };
       }
 
-      // Ensure product has required fields with fallbacks
-      const productData = {
-        _id: productId,
-        name: product.name || product.brand || 'Unknown Product',
-        price: product.price || 0,
-        originalPrice: product.originalPrice || product.price || 0,
-        images: Array.isArray(product.images) ? product.images : (product.image ? [product.image] : []),
-        colors: Array.isArray(product.colors) ? product.colors : [],
-        description: product.description || '',
-        rating: product.rating || 0
-      };
+      const validQuantity = Math.max(1, newQuantity || 1);
 
-      // Prepare color object based on product data
-      const colorObj = selectedColor && productData.colors.length > 0 ? 
-        productData.colors.find(c => c.colorName === selectedColor || c.name === selectedColor) || 
-        { colorName: selectedColor, colorHex: '#000000' } : 
-        { colorName: selectedColor || '', colorHex: '#000000' };
+      try {
+        // ✅ Immediate UI feedback (local update)
+        dispatch(
+          updateQuantity({
+            itemId,
+            quantity: validQuantity,
+          })
+        );
 
-      // Use selected image or first available image
-      const imageUrl = selectedImage || 
-        (productData.images.length > 0 ? productData.images[0] : '') || '';
+        // ⚡ Optional: Optimistically recalculate totals locally for instant feedback
+        try {
+          const localSubtotal = items.reduce((sum, i) => {
+            const price = i.product?.price || i.price || 0;
+            const qty = i._id === itemId ? validQuantity : i.quantity || 1;
+            return sum + price * qty;
+          }, 0);
 
-      // Immediate UI feedback
-      dispatch(addToCart({ 
-        product: productData, 
-        size: selectedSize.toLowerCase(), 
-        quantity: Math.max(1, quantity),
-        color: colorObj,
-        selectedImage: imageUrl
-      }));
+          // If your cartSlice supports setTotals action, you can dispatch this:
+          dispatch({
+            type: "cart/setTotals",
+            payload: { subtotal: localSubtotal, total: localSubtotal },
+          });
+        } catch (err) {
+          console.warn("Local subtotal update skipped:", err.message);
+        }
 
-      // API call
-      await dispatch(addToCartAsync({ 
-        productId: productData._id, 
-        quantity: Math.max(1, quantity), 
-        size: selectedSize.toLowerCase(),
-        color: colorObj,
-        selectedImage: imageUrl
-      })).unwrap();
+        // 🛠 Update on server
+        await dispatch(
+          updateCartItemAsync({
+            itemId,
+            quantity: validQuantity,
+            size: item.size || "M",
+            color: item.color || {},
+            selectedImage: item.selectedImage || "",
+          })
+        ).unwrap();
 
-      return { success: true };
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
-      // Remove from local state if API call failed
-      const productId = product?.id || product?._id;
-      if (productId) {
-        dispatch(removeFromCart({ 
-          productId, 
-          size: selectedSize.toLowerCase(),
-          colorName: selectedColor 
-        }));
+        // 🔥 Refresh full cart details and totals after success
+        dispatch(fetchCartDetails());
+
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to update cart:", error);
+        // Fallback refresh in case of failure
+        dispatch(fetchCartDetails());
+        return {
+          success: false,
+          error: error.message || "Failed to update item quantity",
+        };
       }
-      return { success: false, error: error.message || 'Failed to add item to cart' };
-    }
-  }, [dispatch]);
-
-// Update item quantity by item ID with better error handling and live subtotal update
-  const updateItemQuantity = useCallback(async (itemId, newQuantity) => {
-  if (!itemId) {
-    console.error('Item ID is required');
-    return { success: false, error: 'Item ID is required' };
-  }
-
-  const item = items.find(item => item._id === itemId);
-
-  if (!item) {
-    console.error('Item not found in cart');
-    return { success: false, error: 'Item not found' };
-  }
-
-  const validQuantity = Math.max(1, newQuantity || 1);
-
-  try {
-    // ✅ Immediate UI feedback (local update)
-    dispatch(updateQuantity({
-      itemId,
-      quantity: validQuantity
-    }));
-
-    // ⚡ Optional: Optimistically recalculate totals locally for instant feedback
-    try {
-      const localSubtotal = items.reduce((sum, i) => {
-        const price = i.product?.price || i.price || 0;
-        const qty = i._id === itemId ? validQuantity : (i.quantity || 1);
-        return sum + price * qty;
-      }, 0);
-
-      // If your cartSlice supports setTotals action, you can dispatch this:
-      dispatch({
-        type: 'cart/setTotals',
-        payload: { subtotal: localSubtotal, total: localSubtotal }
-      });
-    } catch (err) {
-      console.warn('Local subtotal update skipped:', err.message);
-    }
-
-    // 🛠 Update on server
-    await dispatch(updateCartItemAsync({
-      itemId,
-      quantity: validQuantity,
-      size: item.size || 'M',
-      color: item.color || {},
-      selectedImage: item.selectedImage || ''
-    })).unwrap();
-
-    // 🔥 Refresh full cart details and totals after success
-    dispatch(fetchCartDetails());
-
-    return { success: true };
-  } catch (error) {
-    console.error('Failed to update cart:', error);
-    // Fallback refresh in case of failure
-    dispatch(fetchCartDetails());
-    return { success: false, error: error.message || 'Failed to update item quantity' };
-  }
-}, [dispatch, items]);
-
+    },
+    [dispatch, items]
+  );
 
   // Update cart quantity by change amount (for +/- buttons)
-  const updateCartQuantity = useCallback(async (itemId, change) => {
-    const item = items.find(item => item._id === itemId);
-    
-    if (!item) return { success: false, error: 'Item not found' };
+  const updateCartQuantity = useCallback(
+    async (itemId, change) => {
+      const item = items.find((item) => item._id === itemId);
 
-    const newQuantity = Math.max(1, (item.quantity || 1) + change);
-    return updateItemQuantity(itemId, newQuantity);
-  }, [items, updateItemQuantity]);
+      if (!item) return { success: false, error: "Item not found" };
+
+      const newQuantity = Math.max(1, (item.quantity || 1) + change);
+      return updateItemQuantity(itemId, newQuantity);
+    },
+    [items, updateItemQuantity]
+  );
 
   // Delete item by item ID with better error handling
-  const deleteItem = useCallback(async (itemId) => {
-    if (!itemId) {
-      console.error('Item ID is required');
-      return { success: false, error: 'Item ID is required' };
-    }
+  const deleteItem = useCallback(
+    async (itemId) => {
+      if (!itemId) {
+        console.error("Item ID is required");
+        return { success: false, error: "Item ID is required" };
+      }
 
-    const item = items.find(item => item._id === itemId);
-    
-    if (!item) {
-      console.error('Item not found in cart');
-      return { success: false, error: 'Item not found' };
-    }
+      const item = items.find((item) => item._id === itemId);
 
-    const productId = item.product?._id || item.productId;
-    const size = item.size || '';
-    const colorName = item.color?.colorName || '';
+      if (!item) {
+        console.error("Item not found in cart");
+        return { success: false, error: "Item not found" };
+      }
 
-    if (!productId) {
-      console.error('Product ID not found in item');
-      return { success: false, error: 'Product ID not found' };
-    }
+      const productId = item.product?._id || item.productId;
+      const size = item.size || "";
+      const colorName = item.color?.colorName || "";
 
-    try {
-      // Immediate UI feedback
-      dispatch(removeFromCart({ 
-        productId, 
-        size,
-        colorName 
-      }));
+      if (!productId) {
+        console.error("Product ID not found in item");
+        return { success: false, error: "Product ID not found" };
+      }
 
-      // API call
-      await dispatch(removeFromCartAsync({ 
-        productId, 
-        size,
-        colorName 
-      })).unwrap();
+      try {
+        // Immediate UI feedback
+        dispatch(
+          removeFromCart({
+            productId,
+            size,
+            colorName,
+          })
+        );
 
-      return { success: true };
-    } catch (error) {
-      console.error('Failed to remove from cart:', error);
-      // Refresh cart to restore correct state
-      dispatch(fetchCartDetails());
-      return { success: false, error: error.message || 'Failed to delete item' };
-    }
-  }, [dispatch, items]);
+        // API call
+        await dispatch(
+          removeFromCartAsync({
+            productId,
+            size,
+            colorName,
+          })
+        ).unwrap();
+
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to remove from cart:", error);
+        // Refresh cart to restore correct state
+        dispatch(fetchCartDetails());
+        return {
+          success: false,
+          error: error.message || "Failed to delete item",
+        };
+      }
+    },
+    [dispatch, items]
+  );
 
   // Clear entire cart
   const clearCartItems = useCallback(async () => {
@@ -292,84 +342,141 @@ export const useCart = () => {
       await dispatch(clearCartAsync()).unwrap();
       return { success: true };
     } catch (error) {
-      console.error('Failed to clear cart:', error);
-      return { success: false, error: error.message || 'Failed to clear cart' };
+      console.error("Failed to clear cart:", error);
+      return { success: false, error: error.message || "Failed to clear cart" };
     }
   }, [dispatch]);
 
   // Validate cart (only for authenticated users)
   const validateCart = useCallback(async () => {
     if (!isAuthenticated) {
-      return { valid: true, issues: [], message: 'Validation not available for guest users' };
+      return {
+        valid: true,
+        issues: [],
+        message: "Validation not available for guest users",
+      };
     }
 
     try {
       const result = await dispatch(validateCartAsync()).unwrap();
       return result || { valid: true, issues: [] };
     } catch (error) {
-      console.error('Failed to validate cart:', error);
-      return { valid: false, issues: ['Validation failed'], error: error.message };
+      console.error("Failed to validate cart:", error);
+      return {
+        valid: false,
+        issues: ["Validation failed"],
+        error: error.message,
+      };
     }
   }, [dispatch, isAuthenticated]);
 
   // Handle cart merge after user login
   const mergeCart = useCallback(async () => {
     try {
-      const sessionId = localStorage.getItem('guestSessionId');
+      const sessionId = localStorage.getItem("guestSessionId");
       if (sessionId && isAuthenticated) {
         await dispatch(mergeCartAsync(sessionId)).unwrap();
         // Clear guest session after merge
-        localStorage.removeItem('guestSessionId');
+        localStorage.removeItem("guestSessionId");
         // Refresh cart details
         dispatch(fetchCartDetails());
         return { success: true };
       }
-      return { success: false, message: 'No guest cart to merge' };
+      return { success: false, message: "No guest cart to merge" };
     } catch (error) {
-      console.error('Failed to merge cart:', error);
-      return { success: false, error: error.message || 'Failed to merge cart' };
+      console.error("Failed to merge cart:", error);
+      return { success: false, error: error.message || "Failed to merge cart" };
     }
   }, [dispatch, isAuthenticated]);
 
   // Apply discount/coupon (only for authenticated users)
-  const applyDiscount = useCallback(async (code, type = 'coupon') => {
-    if (!isAuthenticated) {
-      return { success: false, error: 'Please login to apply discounts' };
-    }
+  const applyDiscount = useCallback(
+    async (code, type = "coupon") => {
+      if (!isAuthenticated) {
+        return { success: false, error: "Please login to apply discounts" };
+      }
 
-    if (!code || typeof code !== 'string') {
-      return { success: false, error: 'Valid discount code is required' };
-    }
+      if (!code || typeof code !== "string") {
+        return { success: false, error: "Valid discount code is required" };
+      }
 
-    try {
-      const result = await dispatch(applyDiscountAsync({ code: code.trim(), type })).unwrap();
-      
-      // Refresh cart details to get updated totals
-      dispatch(fetchCartDetails());
-      return { success: true, result };
-    } catch (error) {
-      console.error('Failed to apply discount:', error);
-      return { success: false, error: error.message || 'Failed to apply discount' };
-    }
-  }, [dispatch, isAuthenticated]);
+      try {
+        const result = await dispatch(
+          applyDiscountAsync({ code: code.trim(), type })
+        ).unwrap();
+
+        // Refresh cart details to get updated totals
+        dispatch(fetchCartDetails());
+        return { success: true, result };
+      } catch (error) {
+        console.error("Failed to apply discount:", error);
+        return {
+          success: false,
+          error: error.message || "Failed to apply discount",
+        };
+      }
+    },
+    [dispatch, isAuthenticated]
+  );
+
+  // Smart apply discount - works for both authenticated and guest users
+  const applyDiscountSmart = useCallback(
+    async (code, type = "coupon") => {
+      if (!code || typeof code !== "string") {
+        return { success: false, error: "Valid discount code is required" };
+      }
+
+      try {
+        let result;
+
+        if (isAuthenticated) {
+          // For authenticated users - existing logic
+          result = await dispatch(
+            applyDiscountAsync({ code: code.trim(), type })
+          ).unwrap();
+        } else {
+          // For guest users - new logic
+          result = await dispatch(
+            applyGuestDiscountAsync({ code: code.trim(), type })
+          ).unwrap();
+        }
+
+        // Refresh cart details to get updated totals
+        dispatch(fetchCartDetails());
+        return { success: true, result };
+      } catch (error) {
+        console.error("Failed to apply discount:", error);
+        return {
+          success: false,
+          error: error.message || "Failed to apply discount",
+        };
+      }
+    },
+    [dispatch, isAuthenticated]
+  );
 
   // Remove discount (only for authenticated users)
+  // Remove discount - works for both authenticated and guest users
   const removeDiscount = useCallback(async () => {
-    if (!isAuthenticated) {
-      return { success: false, error: 'Please login to manage discounts' };
-    }
-
     try {
-      await dispatch(removeDiscountAsync()).unwrap();
-      
+      // Use different thunk based on authentication status
+      if (isAuthenticated) {
+        await dispatch(removeDiscountAsync()).unwrap();
+      } else {
+        await dispatch(removeGuestDiscountAsync()).unwrap();
+      }
+
       // Refresh cart details to get updated totals
       dispatch(fetchCartDetails());
       return { success: true };
     } catch (error) {
-      console.error('Failed to remove discount:', error);
-      return { success: false, error: error.message || 'Failed to remove discount' };
+      console.error("Failed to remove discount:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to remove discount",
+      };
     }
-  }, [dispatch, isAuthenticated]);
+  }, [dispatch, isAuthenticated]); // Add isAuthenticated to dependencies
 
   // Refresh cart data
   const refreshCart = useCallback(() => {
@@ -390,11 +497,11 @@ export const useCart = () => {
     if (totals?.subtotal >= 0) {
       return totals.subtotal;
     }
-    
+
     return items.reduce((total, item) => {
       const itemPrice = item.product?.price || item.price || 0;
       const itemQuantity = item.quantity || 0;
-      const itemTotal = item.itemTotal || (itemPrice * itemQuantity);
+      const itemTotal = item.itemTotal || itemPrice * itemQuantity;
       return total + itemTotal;
     }, 0);
   }, [totals?.subtotal, items]);
@@ -407,48 +514,61 @@ export const useCart = () => {
     if (totals?.itemCount >= 0) {
       return totals.itemCount;
     }
-    
+
     if (totalItems >= 0) {
       return totalItems;
     }
-    
+
     return items.reduce((total, item) => total + (item.quantity || 0), 0);
   }, [totals?.itemCount, totalItems, items]);
 
-  const isItemInCart = useCallback((productId, size = '', colorName = '') => {
-    if (!productId) return false;
-    
-    return items.some(item => {
-      const itemProductId = item.product?._id || item.productId;
-      const itemSize = item.size || '';
-      const itemColor = item.color?.colorName || '';
-      
-      return itemProductId === productId && 
-             itemSize === size.toLowerCase() && 
-             itemColor === (colorName || '');
-    });
-  }, [items]);
+  const isItemInCart = useCallback(
+    (productId, size = "", colorName = "") => {
+      if (!productId) return false;
 
-  const getItemQuantity = useCallback((productId, size = '', colorName = '') => {
-    if (!productId) return 0;
-    
-    const item = items.find(item => {
-      const itemProductId = item.product?._id || item.productId;
-      const itemSize = item.size || '';
-      const itemColor = item.color?.colorName || '';
-      
-      return itemProductId === productId && 
-             itemSize === size.toLowerCase() && 
-             itemColor === (colorName || '');
-    });
-    
-    return item?.quantity || 0;
-  }, [items]);
+      return items.some((item) => {
+        const itemProductId = item.product?._id || item.productId;
+        const itemSize = item.size || "";
+        const itemColor = item.color?.colorName || "";
 
-  const getItemById = useCallback((itemId) => {
-    if (!itemId) return null;
-    return items.find(item => item._id === itemId) || null;
-  }, [items]);
+        return (
+          itemProductId === productId &&
+          itemSize === size.toLowerCase() &&
+          itemColor === (colorName || "")
+        );
+      });
+    },
+    [items]
+  );
+
+  const getItemQuantity = useCallback(
+    (productId, size = "", colorName = "") => {
+      if (!productId) return 0;
+
+      const item = items.find((item) => {
+        const itemProductId = item.product?._id || item.productId;
+        const itemSize = item.size || "";
+        const itemColor = item.color?.colorName || "";
+
+        return (
+          itemProductId === productId &&
+          itemSize === size.toLowerCase() &&
+          itemColor === (colorName || "")
+        );
+      });
+
+      return item?.quantity || 0;
+    },
+    [items]
+  );
+
+  const getItemById = useCallback(
+    (itemId) => {
+      if (!itemId) return null;
+      return items.find((item) => item._id === itemId) || null;
+    },
+    [items]
+  );
 
   // Check if cart is empty
   const isCartEmpty = useCallback(() => {
@@ -456,13 +576,16 @@ export const useCart = () => {
   }, [items]);
 
   // Get cart items by product ID
-  const getItemsByProductId = useCallback((productId) => {
-    if (!productId) return [];
-    return items.filter(item => {
-      const itemProductId = item.product?._id || item.productId;
-      return itemProductId === productId;
-    });
-  }, [items]);
+  const getItemsByProductId = useCallback(
+    (productId) => {
+      if (!productId) return [];
+      return items.filter((item) => {
+        const itemProductId = item.product?._id || item.productId;
+        return itemProductId === productId;
+      });
+    },
+    [items]
+  );
 
   return {
     // State
@@ -474,11 +597,11 @@ export const useCart = () => {
     totalItems: getCartItemCount(),
     totalPrice: getCartTotal(),
     isAuthenticated,
-    
+
     // Computed values
     subtotal: getCartSubtotal(),
     discountAmount: getDiscountAmount(),
-    
+
     // Loading states
     loading,
     addingToCart,
@@ -489,7 +612,7 @@ export const useCart = () => {
     mergingCart,
     applyingDiscount,
     removingDiscount,
-    
+
     // Error states
     error,
     addError,
@@ -499,14 +622,14 @@ export const useCart = () => {
     validateError,
     mergeError,
     discountError,
-    
+
     // Discount state (only available for authenticated users)
-    hasDiscount: isAuthenticated ? hasDiscount : false,
-    appliedDiscount: isAuthenticated ? appliedDiscount : null,
-    
+    hasDiscount,
+    appliedDiscount,
+
     // Validation state
     cartValidation,
-    
+
     // Actions
     addItemToCart,
     deleteItem,
@@ -518,16 +641,17 @@ export const useCart = () => {
     validateCart,
     mergeCart,
     applyDiscount,
+    applyDiscountSmart,
     removeDiscount,
-    
+
     // Helpers
     isItemInCart,
     getItemQuantity,
     getItemById,
     isCartEmpty,
     getItemsByProductId,
-    
+
     // Sync action
-    syncWithApiCart: (data) => dispatch(syncWithApiCart(data))
+    syncWithApiCart: (data) => dispatch(syncWithApiCart(data)),
   };
 };

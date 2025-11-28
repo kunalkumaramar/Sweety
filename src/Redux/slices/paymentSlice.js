@@ -79,6 +79,18 @@ export const getPaymentByOrderId = createAsyncThunk(
   }
 );
 
+export const initiateGuestPayment = createAsyncThunk(
+  'payment/initiateGuest',
+  async ({ orderId, method, guestEmail }, { rejectWithValue }) => {
+    try {
+      const response = await apiService.initiateGuestPayment(orderId, method, guestEmail);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.message || 'Failed to initiate guest payment');
+    }
+  }
+);
+
 const initialState = {
   currentPayment: null,
   paymentDetails: null,
@@ -185,6 +197,22 @@ const paymentSlice = createSlice({
         state.paymentDetails = action.payload;
       })
       .addCase(getPaymentDetails.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // Initiate Guest Payment
+      .addCase(initiateGuestPayment.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(initiateGuestPayment.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentPayment = action.payload;
+        state.razorpayOrderId = action.payload.order?.id || action.payload.razorpayOrderId;
+        state.razorpayKey = action.payload.key || action.payload.razorpayKey;
+      })
+      .addCase(initiateGuestPayment.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
