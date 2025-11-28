@@ -214,9 +214,9 @@ const Checkout = () => {
     const fetchUserData = async () => {
       if (isAuthenticated && !user) {
         try {
-          console.log("🔄 Fetching user profile...");
+          //console.log("🔄 Fetching user profile...");
           const response = await apiService.getUserProfile();
-          console.log("✅ User profile fetched:", response.data);
+          //console.log("✅ User profile fetched:", response.data);
 
           // Update Redux with user data (if you have an action for this)
           // dispatch(setUser(response.data));
@@ -243,17 +243,17 @@ const Checkout = () => {
               phone: userPhone,
             });
 
-            console.log("✅ Address pre-filled");
+            //console.log("✅ Address pre-filled");
           } else {
             setShippingAddress((prev) => ({
               ...prev,
               name: fullName,
               phone: userPhone,
             }));
-            console.log("✅ Name and phone pre-filled (no saved address)");
+            //console.log("✅ Name and phone pre-filled (no saved address)");
           }
         } catch (error) {
-          console.error("❌ Failed to fetch user profile:", error);
+          //console.error("❌ Failed to fetch user profile:", error);
         }
       }
     };
@@ -264,30 +264,30 @@ const Checkout = () => {
   // Pre-fill user data if available
   // Pre-fill user data if available - WITH DEBUG LOGGING
   useEffect(() => {
-    console.log("🔍 Pre-fill useEffect triggered");
-    console.log("User object:", user);
-    console.log("Is Authenticated:", isAuthenticated);
+    //console.log("🔍 Pre-fill useEffect triggered");
+    //console.log("User object:", user);
+    //console.log("Is Authenticated:", isAuthenticated);
 
     if (user) {
-      console.log("User has data:", {
+      {/*console.log("User has data:", {
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone,
         addresses: user.addresses,
         addressesLength: user.addresses?.length,
-      });
+      });*/}
 
       // Set user's full name and phone
       const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
       const userPhone = user.phone || "";
 
-      console.log("Computed fullName:", fullName);
-      console.log("Computed userPhone:", userPhone);
+      //console.log("Computed fullName:", fullName);
+      //console.log("Computed userPhone:", userPhone);
 
       // Pre-fill with first available address
       if (user.addresses && user.addresses.length > 0) {
         const firstAddress = user.addresses[0];
-        console.log("First address found:", firstAddress);
+        //console.log("First address found:", firstAddress);
 
         const newShippingAddress = {
           name: fullName,
@@ -299,10 +299,10 @@ const Checkout = () => {
           phone: userPhone,
         };
 
-        console.log("Setting shipping address to:", newShippingAddress);
+        //console.log("Setting shipping address to:", newShippingAddress);
         setShippingAddress(newShippingAddress);
       } else {
-        console.log("No addresses found, only setting name and phone");
+        //console.log("No addresses found, only setting name and phone");
         // No saved address, just set name and phone
         setShippingAddress((prev) => ({
           ...prev,
@@ -311,7 +311,7 @@ const Checkout = () => {
         }));
       }
     } else {
-      console.log("❌ User object is null/undefined");
+      //console.log("❌ User object is null/undefined");
     }
   }, [user, isAuthenticated]);
 

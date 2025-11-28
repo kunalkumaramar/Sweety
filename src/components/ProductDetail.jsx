@@ -120,10 +120,10 @@ const ProductDetail = () => {
 
   // Load categories and subcategories on mount
   useEffect(() => {
-    if (categories.length === 0) {
+    if (categories.length === 0 && !loading) {
       dispatch(getCategories());
     }
-  }, [dispatch, categories.length]);
+  }, [dispatch, categories.length, loading]);
 
   // Fetch product data
   useEffect(() => {
@@ -330,7 +330,7 @@ const ProductDetail = () => {
     );
 
     if (result.success) {
-      console.log("Added to cart successfully");
+      //console.log("Added to cart successfully");
     }
   } catch (error) {
     console.error("Failed to add to cart:", error);

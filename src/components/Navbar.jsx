@@ -42,9 +42,9 @@ const Navbar = () => {
   const { searchResults: productResults, searchLoading: productLoading } =
     useSelector((state) => state.products);
 
-  const { categories } = useSelector((state) => state.categories);
+  const { categories, loading } = useSelector((state) => state.categories);
 
-  const { subcategories } = useSelector((state) => state.subcategories);
+  const { subcategories, loading: subcategoriesLoading } = useSelector((state) => state.subcategories);
 
   // Search results helpers
   const hasSearchResults = productResults.length > 0;
@@ -94,13 +94,13 @@ const Navbar = () => {
 
   // Load categories and subcategories on mount
   useEffect(() => {
-    if (categories.length === 0) {
+    if (categories.length === 0 && !loading) {
       dispatch(getCategories());
     }
-    if (subcategories.length === 0) {
+    if (subcategories.length === 0 && !subcategoriesLoading) {
       dispatch(getAllSubcategories());
     }
-  }, [dispatch, categories.length, subcategories.length]);
+  }, [dispatch, categories.length, subcategories.length, loading, subcategoriesLoading]);
 
   // Map subcategories to categories
   const categoriesWithSubcategories = React.useMemo(() => {

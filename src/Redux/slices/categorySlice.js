@@ -6,7 +6,12 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 // Get all categories
 export const getCategories = createAsyncThunk(
   'categories/getCategories',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
+    const { categories } = getState().categories;
+    if (categories.length > 0) {
+      //console.log('categories fetched from store');
+      return categories;
+    }
     try {
       const response = await fetch(`${API_BASE_URL}/category`);
       const data = await response.json();

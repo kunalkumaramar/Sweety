@@ -278,7 +278,7 @@ const wishlistSlice = createSlice({
         const { productId, selectedSize, selectedColorName, selectedColorHex, selectedImage } = action.meta.arg;
         
         // Optional debug log (remove in production)
-        console.log('Merging selections into wishlist item:', { productId, selectedSize, selectedColorName });
+        //console.log('Merging selections into wishlist item:', { productId, selectedSize, selectedColorName });
         
         let items = action.payload.items || [];
         
@@ -297,7 +297,7 @@ const wishlistSlice = createSlice({
             selectedImage: selectedImage || items[addedIndex].selectedImage
           };
           // Optional debug log
-          console.log('Merged item selectedSize:', items[addedIndex].selectedSize);
+          //console.log('Merged item selectedSize:', items[addedIndex].selectedSize);
         }
         
         state.wishlist = action.payload;

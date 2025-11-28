@@ -90,7 +90,7 @@ const LingerieHeroSection = () => {
 
   // Redux state
   const { subcategories, loading: subcategoriesLoading } = useSelector(state => state.subcategories);
-  const { categories } = useSelector(state => state.categories);
+  const { categories, loading } = useSelector(state => state.categories);
 
   const [leftImageLoaded, setLeftImageLoaded] = useState(false);
   const [rightImageLoaded, setRightImageLoaded] = useState(false);
@@ -98,13 +98,13 @@ const LingerieHeroSection = () => {
 
   // Fetch subcategories and categories on mount
   useEffect(() => {
-    if (subcategories.length === 0) {
+    if (subcategories.length === 0 && !subcategoriesLoading) {
       dispatch(getAllSubcategories());
     }
-    if (categories.length === 0) {
+    if (categories.length === 0 && !loading) {
       dispatch(getCategories());
     }
-  }, [dispatch, subcategories.length, categories.length]);
+  }, [dispatch, subcategories.length, categories.length, loading]);
 
   // Handle window resize to update isMobile
   useEffect(() => {

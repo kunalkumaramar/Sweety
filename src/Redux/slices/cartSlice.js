@@ -106,8 +106,8 @@ export const addToCartAsync = createAsyncThunk(
         }
       }
 
-      console.log("=== Cart API Response ===");
-      console.log("Response:", response);
+      //console.log("=== Cart API Response ===");
+      //console.log("Response:", response);
 
       return response.data;
     } catch (error) {
@@ -820,7 +820,7 @@ const cartSlice = createSlice({
       .addCase(mergeCartAsync.fulfilled, (state, action) => {
         state.mergingCart = false;
 
-        console.log("=== MERGE CART API RESPONSE ===", action.payload);
+        //console.log("=== MERGE CART API RESPONSE ===", action.payload);
 
         // Update state with merged cart
         if (action.payload.items && Array.isArray(action.payload.items)) {
@@ -863,7 +863,7 @@ const cartSlice = createSlice({
             };
           });
 
-          console.log("Mapped items for Redux state:", state.items);
+          //console.log("Mapped items for Redux state:", state.items);
         }
 
         // Update totals from merge response

@@ -78,12 +78,12 @@ const WishlistItem = ({
         return;
       }
 
-      console.log('handleMoveToCart - Item details:', {
+      {/*console.log('handleMoveToCart - Item details:', {
         productId,
         selectedSize: item.selectedSize,
         selectedColorName: item.selectedColorName,
         selectedImage: item.selectedImage
-      });
+      });*/}
 
       // FIX #1: ALWAYS use stored size/color from the wishlist item
       const finalSize = item.selectedSize || '30';
@@ -91,13 +91,13 @@ const WishlistItem = ({
       const finalColorHex = item.selectedColorHex || '#808080';
       const finalImage = item.selectedImage || productData.image;
 
-      console.log('Calling moveToCart with:', {
+      {/*console.log('Calling moveToCart with:', {
         productId,
         size: finalSize,
         colorName: finalColorName,
         colorHex: finalColorHex,
         image: finalImage
-      });
+      });*/}
 
       // Call moveToCart with size/color from stored wishlist item
       const result = await moveToCart(

@@ -113,10 +113,10 @@ const Products = ({
 
   // Load categories on component mount
   useEffect(() => {
-    if (categories.length === 0) {
+    if (categories.length === 0 && !loading) {
       dispatch(getCategories());
     }
-  }, [dispatch, categories.length]);
+  }, [dispatch, categories.length, loading]);
 
   // Load category details when category changes
   useEffect(() => {

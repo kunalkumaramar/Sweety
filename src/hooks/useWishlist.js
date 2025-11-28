@@ -78,12 +78,12 @@ export const useWishlist = () => {
       });
 
       if (validItems.length === 0) {
-        console.log('No valid items to enrich');
+        //console.log('No valid items to enrich');
         setEnrichedItems([]);
         return;
       }
 
-      console.log(`Enriching ${validItems.length} valid items...`); // Debug log
+      //console.log(`Enriching ${validItems.length} valid items...`); // Debug log
 
       setEnriching(true);
       try {
@@ -404,7 +404,7 @@ export const useWishlist = () => {
         ? selectedImage
         : (productObj?.colors?.[0]?.images?.[0] || productObj?.images?.[0] || productObj?.image || '');
 
-      console.log('moveItemToCart using:', { productId, finalSize, useColorName, useImage }); // Debug
+      //console.log('moveItemToCart using:', { productId, finalSize, useColorName, useImage }); // Debug
 
       // Dispatch the thunk that calls POST /wishlist/move-to-cart/:productId
       await dispatch(moveWishlistItemToCart({

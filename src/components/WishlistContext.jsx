@@ -61,14 +61,14 @@ export const WishlistProvider = ({ children }) => {
       selectedImage: selectedImage || product.selectedImage
     };
 
-    console.log('Full productWithSelection object:', productWithSelection);
-    console.log('Adding to wishlist with selection:', {
+    //console.log('Full productWithSelection object:', productWithSelection);
+    {/*console.log('Adding to wishlist with selection:', {
       product: productWithSelection.brand || productWithSelection.name,
       productId: productWithSelection._id || productWithSelection.id,
       selectedSize: productWithSelection.selectedSize,
       selectedColorName: productWithSelection.selectedColorName,
       selectedImage: productWithSelection.selectedImage
-    });
+    });*/}
 
     const payload = {
       productId: productWithSelection._id || productWithSelection.id,
@@ -149,7 +149,7 @@ export const WishlistProvider = ({ children }) => {
       selectedImage: selectedImage || product.selectedImage
     };
 
-    console.log('Full productWithSelection for toggle:', productWithSelection);
+    //console.log('Full productWithSelection for toggle:', productWithSelection);
 
     const payload = {
       productId,
@@ -197,25 +197,25 @@ export const WishlistProvider = ({ children }) => {
         throw new Error('Product ID is required');
       }
 
-      console.log('moveItemToCart called with:', {
+      {/*console.log('moveItemToCart called with:', {
         productId,
         quantity,
         size,
         color,
         selectedImage
-      });
+      });*/}
 
       const foundItem = wishlistItems?.find((item) => {
         const itemProductId = item.id || (item.product && (item.product._id || item.product.id)) || item._id;
         const matches = itemProductId === productId || item._id === productId || item.id === productId;
-        console.log('Checking item:', {
+       {/*console.log('Checking item:', {
           itemId: item.id,
           itemProductId: itemProductId,
           productId: productId,
           matches: matches,
           selectedSize: item.selectedSize,
           selectedColorName: item.selectedColorName
-        });
+        });*/}
         return matches;
       });
 
@@ -228,11 +228,11 @@ export const WishlistProvider = ({ children }) => {
         throw new Error('Item not found in wishlist');
       }
 
-      console.log('Found item in wishlist:', {
+      {/*console.log('Found item in wishlist:', {
         selectedSize: foundItem.selectedSize,
         selectedColorName: foundItem.selectedColorName,
         selectedImage: foundItem.selectedImage
-      });
+      });*/}
 
       const productData = foundItem.product || foundItem;
       const correctProductId = foundItem.id || productData.id || productData._id;
@@ -249,7 +249,7 @@ export const WishlistProvider = ({ children }) => {
         }
       }
 
-      console.log('Moving to cart with FINAL values:', {
+      {/*console.log('Moving to cart with FINAL values:', {
         productId: correctProductId,
         size: finalSize,
         colorName: finalColorName,
@@ -257,7 +257,7 @@ export const WishlistProvider = ({ children }) => {
         image: finalImage,
         storedSize: foundItem.selectedSize,
         passedSize: size
-      });
+      });*/}
 
       const asyncCartData = {
         productId: correctProductId,
@@ -286,9 +286,9 @@ export const WishlistProvider = ({ children }) => {
         }
         
         showNotification('Item moved to cart!', 'success');
-        console.log('Before refreshWishlist, wishlistItems:', wishlistItems);
+        //console.log('Before refreshWishlist, wishlistItems:', wishlistItems);
         await refreshWishlist();
-        console.log('After refreshWishlist, wishlistItems:', wishlistItems);
+        //console.log('After refreshWishlist, wishlistItems:', wishlistItems);
         return { success: true };
       } else {
         throw new Error(cartResponse?.message || 'Failed to add item to cart');
@@ -306,14 +306,14 @@ export const WishlistProvider = ({ children }) => {
       return { success: false };
     }
 
-    console.log('Before moveAllToCart, wishlistItems:', wishlistItems);
+    //console.log('Before moveAllToCart, wishlistItems:', wishlistItems);
     const result = await moveAllToCart();
     
     if (result.success) {
       showNotification('All items moved to cart!', 'success');
-      console.log('Before refreshWishlist (moveAll), wishlistItems:', wishlistItems);
+      //console.log('Before refreshWishlist (moveAll), wishlistItems:', wishlistItems);
       await refreshWishlist();
-      console.log('After refreshWishlist (moveAll), wishlistItems:', wishlistItems);
+      //console.log('After refreshWishlist (moveAll), wishlistItems:', wishlistItems);
     } else {
       const message = result.moved > 0 
         ? `${result.moved} items moved to cart, ${result.failed} failed`

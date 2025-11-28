@@ -7,8 +7,10 @@ import { getCategories } from "../Redux/slices/categorySlice";
 const IntimatesCarousel = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { categories, loading, error } = useSelector((state) => state.categories);
-  
+  const { categories, loading, error } = useSelector(
+    (state) => state.categories
+  );
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(4);
   const [isMobile, setIsMobile] = useState(false);
@@ -22,42 +24,42 @@ const IntimatesCarousel = () => {
   // Image optimization helper
   const optimizeImage = (url, width = 400) => {
     if (!url) return url;
-    return url.replace(
-      '/upload/',
-      `/upload/f_auto,q_auto:eco,w_${width}/`
-    );
+    return url.replace("/upload/", `/upload/f_auto,q_auto:eco,w_${width}/`);
   };
 
   // Fetch categories on component mount
   useEffect(() => {
-    dispatch(getCategories());
-  }, [dispatch]);
+    if (categories.length === 0 && !loading) {
+      dispatch(getCategories());
+    }
+  }, [dispatch, categories.length, loading]);
 
   // Responsive items per page and mobile detection
   useEffect(() => {
     const updateItemsPerPage = () => {
       const width = window.innerWidth;
       if (width < 768) {
-        setItemsPerPage(2);      // Mobile: 2 cards
+        setItemsPerPage(2); // Mobile: 2 cards
         setIsMobile(true);
       } else if (width < 1024) {
-        setItemsPerPage(3);      // Medium: 3 cards
+        setItemsPerPage(3); // Medium: 3 cards
         setIsMobile(false);
       } else {
-        setItemsPerPage(4);      // Large: 4 cards
+        setItemsPerPage(4); // Large: 4 cards
         setIsMobile(false);
       }
     };
 
     updateItemsPerPage();
-    window.addEventListener('resize', updateItemsPerPage);
-    return () => window.removeEventListener('resize', updateItemsPerPage);
+    window.addEventListener("resize", updateItemsPerPage);
+    return () => window.removeEventListener("resize", updateItemsPerPage);
   }, []);
 
   // Load GSAP
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';
+    const script = document.createElement("script");
+    script.src =
+      "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js";
     document.head.appendChild(script);
 
     return () => {
@@ -69,7 +71,7 @@ const IntimatesCarousel = () => {
 
   const nextSlide = () => {
     if (categories.length > itemsPerPage) {
-      setCurrentIndex(prev => 
+      setCurrentIndex((prev) =>
         prev < categories.length - itemsPerPage ? prev + 1 : 0
       );
     }
@@ -77,7 +79,7 @@ const IntimatesCarousel = () => {
 
   const prevSlide = () => {
     if (categories.length > itemsPerPage) {
-      setCurrentIndex(prev => 
+      setCurrentIndex((prev) =>
         prev > 0 ? prev - 1 : categories.length - itemsPerPage
       );
     }
@@ -116,20 +118,22 @@ const IntimatesCarousel = () => {
 
   const handleCategoryClick = (category) => {
     // Create URL-friendly slug from category name (matching Navbar pattern)
-    const categorySlug = category.name.toLowerCase().replace(/\s+/g, '-');
-    
+    const categorySlug = category.name.toLowerCase().replace(/\s+/g, "-");
+
     // Navigate first, then scroll will happen automatically on the new page
     navigate(`/products/${categorySlug}`);
   };
 
-  const progressWidth = categories.length > 0 
-    ? `${((currentIndex + itemsPerPage) / categories.length) * 100}%` 
-    : '0%';
+  const progressWidth =
+    categories.length > 0
+      ? `${((currentIndex + itemsPerPage) / categories.length) * 100}%`
+      : "0%";
 
   // Check if navigation buttons should be shown
   const showNavigation = categories.length > itemsPerPage;
   const showPrevButton = showNavigation && currentIndex > 0;
-  const showNextButton = showNavigation && currentIndex < categories.length - itemsPerPage;
+  const showNextButton =
+    showNavigation && currentIndex < categories.length - itemsPerPage;
 
   // Calculate card width percentage for sliding effect
   const cardWidthPercentage = 100 / itemsPerPage;
@@ -138,8 +142,14 @@ const IntimatesCarousel = () => {
   if (loading) {
     return (
       <div className="w-full py-8 sm:py-12 bg-white px-4 lg:px-2">
-        <h2 className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-8 sm:mb-12 text-gray-800 tracking-wide"
-          style={{ fontFamily: "Montaga, serif", fontWeight: 400, fontStyle: "normal" }}>
+        <h2
+          className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-8 sm:mb-12 text-gray-800 tracking-wide"
+          style={{
+            fontFamily: "Montaga, serif",
+            fontWeight: 400,
+            fontStyle: "normal",
+          }}
+        >
           There's More to explore
         </h2>
         <div className="flex justify-center items-center h-64">
@@ -153,8 +163,14 @@ const IntimatesCarousel = () => {
   if (error) {
     return (
       <div className="w-full py-8 sm:py-12 bg-white px-4 lg:px-2">
-        <h2 className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-8 sm:mb-12 text-gray-800 tracking-wide"
-          style={{ fontFamily: "Montaga, serif", fontWeight: 400, fontStyle: "normal" }}>
+        <h2
+          className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-8 sm:mb-12 text-gray-800 tracking-wide"
+          style={{
+            fontFamily: "Montaga, serif",
+            fontWeight: 400,
+            fontStyle: "normal",
+          }}
+        >
           There's More to explore
         </h2>
         <div className="text-center text-red-500 py-8">
@@ -168,8 +184,14 @@ const IntimatesCarousel = () => {
   if (!categories || categories.length === 0) {
     return (
       <div className="w-full py-8 sm:py-12 bg-white px-4 lg:px-2">
-        <h2 className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-8 sm:mb-12 text-gray-800 tracking-wide"
-          style={{ fontFamily: "Montaga, serif", fontWeight: 400, fontStyle: "normal" }}>
+        <h2
+          className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-8 sm:mb-12 text-gray-800 tracking-wide"
+          style={{
+            fontFamily: "Montaga, serif",
+            fontWeight: 400,
+            fontStyle: "normal",
+          }}
+        >
           There's More to explore
         </h2>
         <div className="text-center text-gray-500 py-8">
@@ -182,8 +204,14 @@ const IntimatesCarousel = () => {
   return (
     <div className="w-full py-8 sm:py-12 bg-white px-4 lg:px-2">
       {/* Title */}
-      <h2 className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-8 sm:mb-12 text-gray-800 tracking-wide"
-        style={{ fontFamily: "Montaga, serif", fontWeight: 400, fontStyle: "normal" }}>
+      <h2
+        className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-8 sm:mb-12 text-gray-800 tracking-wide"
+        style={{
+          fontFamily: "Montaga, serif",
+          fontWeight: 400,
+          fontStyle: "normal",
+        }}
+      >
         There's More to explore
       </h2>
 
@@ -211,11 +239,11 @@ const IntimatesCarousel = () => {
         )}
 
         {/* Cards Container */}
-        <div 
+        <div
           className="overflow-hidden mx-2 sm:mx-14"
           {...(isMobile && showNavigation ? { onTouchStart, onTouchEnd } : {})}
         >
-          <div 
+          <div
             ref={containerRef}
             className="flex transition-transform duration-200 ease-in-out"
             style={{
@@ -227,8 +255,10 @@ const IntimatesCarousel = () => {
                 key={category._id}
                 onClick={() => handleCategoryClick(category)}
                 className="flex-shrink-0 mx-1.5 sm:mx-2 lg:mx-3 cursor-pointer group"
-                style={{ 
-                  width: `calc(${cardWidthPercentage}% - ${itemsPerPage === 2 ? '12px' : '24px'})`,
+                style={{
+                  width: `calc(${cardWidthPercentage}% - ${
+                    itemsPerPage === 2 ? "12px" : "24px"
+                  })`,
                 }}
               >
                 <div className="card-item overflow-hidden hover:shadow-xl transition-all duration-300 border-[4px] border-[#E8B0BD]">
@@ -240,31 +270,43 @@ const IntimatesCarousel = () => {
                       </div>
                     )}
                     <img
-                      src={optimizeImage(category.image) || 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop&crop=center'}
+                      src={
+                        optimizeImage(category.image) ||
+                        "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop&crop=center"
+                      }
                       alt={category.name}
-                      className={`w-full h-48 sm:h-56 md:h-64 lg:h-80 object-cover transition-all duration-500 group-hover:scale-105 ${loadedImages[category._id] ? "opacity-100" : "opacity-0"}`}
+                      className={`w-full h-48 sm:h-56 md:h-64 lg:h-80 object-cover transition-all duration-500 group-hover:scale-105 ${
+                        loadedImages[category._id] ? "opacity-100" : "opacity-0"
+                      }`}
                       loading="lazy"
-                      onLoad={() => setLoadedImages(prev => ({...prev, [category._id]: true}))}
+                      onLoad={() =>
+                        setLoadedImages((prev) => ({
+                          ...prev,
+                          [category._id]: true,
+                        }))
+                      }
                       onError={(e) => {
-                        e.target.src = 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop&crop=center';
+                        e.target.src =
+                          "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=500&fit=crop&crop=center";
                       }}
                     />
-                    
+
                     {/* Category Text Overlay */}
                     <div className="absolute bottom-4 left-4 z-10">
-                      <h3 className="text-white text-lg sm:text-xl lg:text-2xl font-light tracking-wide drop-shadow-lg"
+                      <h3
+                        className="text-white text-lg sm:text-xl lg:text-2xl font-light tracking-wide drop-shadow-lg"
                         style={{
                           fontFamily: "Montaga, serif",
                           fontWeight: 400,
-                        }}>
+                        }}
+                      >
                         {category.name}
                       </h3>
                     </div>
-                    
+
                     {/* Gradient Overlay for Text Readability */}
                     <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
                   </div>
-                  
                 </div>
               </div>
             ))}

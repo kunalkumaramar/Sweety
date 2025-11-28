@@ -23,7 +23,7 @@ class ApiService {
 
     // For debugging
     if (options.method === "POST" && options.body) {
-      console.log("Request body:", JSON.parse(options.body));
+      //console.log("Request body:", JSON.parse(options.body));
     }
 
     try {
@@ -53,9 +53,9 @@ class ApiService {
         Math.floor(Date.now() / 1000).toString() +
         Math.random().toString(36).substring(2, 15);
       localStorage.setItem("guestSessionId", sessionId);
-      console.log("Created new guest session:", sessionId);
+      //console.log("Created new guest session:", sessionId);
     } else {
-      console.log("Using existing guest session:", sessionId);
+      //console.log("Using existing guest session:", sessionId);
     }
     return sessionId;
   }

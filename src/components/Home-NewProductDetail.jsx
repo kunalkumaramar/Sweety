@@ -109,7 +109,9 @@ const HomeProductDetailSection = () => {
       selectedSize,
       selectedImage
     );
-    if (result.success) console.log('Added to cart');
+    if (result.success) {
+      //console.log('Added to cart');
+    }
   } catch (error) {
     console.error('Add to cart failed:', error);
   } finally {

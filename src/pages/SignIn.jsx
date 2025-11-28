@@ -110,7 +110,7 @@ const SignIn = ({ isOpen, onClose, initialMode = "login" }) => {
       if (sessionId) {
         try {
           await dispatch(mergeCartAsync(sessionId)).unwrap();
-          console.log('✅ Cart merged successfully after login');
+          //console.log('✅ Cart merged successfully after login');
         } catch (error) {
           console.error('❌ Failed to merge cart:', error);
         }
@@ -148,7 +148,7 @@ const SignIn = ({ isOpen, onClose, initialMode = "login" }) => {
       if (sessionId) {
         try {
           await dispatch(mergeCartAsync(sessionId)).unwrap();
-          console.log('✅ Cart merged successfully after registration');
+          //console.log('✅ Cart merged successfully after registration');
         } catch (error) {
           console.error('❌ Failed to merge cart:', error);
         }
@@ -165,7 +165,7 @@ const SignIn = ({ isOpen, onClose, initialMode = "login" }) => {
   };
 
   const handleContinueAsGuest = () => {
-    console.log("Continue as guest clicked");
+    //console.log("Continue as guest clicked");
     handleClose();
   };
 

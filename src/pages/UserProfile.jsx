@@ -75,10 +75,10 @@ const UserProfile = () => {
                           errorObj.errors?.some(err => err.message.toLowerCase().includes('unauthorized'));
       
       if (isAuthError) {
-        console.log("Detected auth error, logging out and redirecting...");
+        //("Detected auth error, logging out and redirecting...");
         dispatch(logout()); // This should clear localStorage via clearAuthStorage()
         // Verify token cleared
-        console.log("Token after logout:", localStorage.getItem('token'));
+        //console.log("Token after logout:", localStorage.getItem('token'));
         // Redirect to home (you can modify to open login modal via a global state or route)
         navigate("/", { replace: true, state: { from: 'profile', reason: 'session_expired' } }); // Pass state to trigger modal on home
         return;
@@ -170,7 +170,7 @@ const UserProfile = () => {
                         errorObj.errors?.some(err => err.message.toLowerCase().includes('unauthorized'));
     
     if (isAuthError) {
-      console.log("Auth error during update, logging out...");
+      //console.log("Auth error during update, logging out...");
       dispatch(logout());
       navigate("/", { replace: true, state: { from: 'profile', reason: 'session_expired' } });
       return;
