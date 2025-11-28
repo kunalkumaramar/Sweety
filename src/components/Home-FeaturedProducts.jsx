@@ -6,7 +6,11 @@ import React, {
   useCallback,
   forwardRef,
 } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { getCategories } from "../Redux/slices/categorySlice";
+import { getSubcategoriesByCategory } from "../Redux/slices/subcategorySlice";
+import { getProductsBySubcategory } from "../Redux/slices/productsSlice";
 
 // Cloudinary Image Optimization Component
 const CloudinaryImage = forwardRef(
@@ -208,24 +212,31 @@ const CircularProductCard = React.memo(
 );
 
 const FeaturedProducts = () => {
+  const dispatch = useDispatch();
+
+  // ✅ Get data from Redux
+  const { categories, loading: categoriesLoading } = useSelector(
+    (state) => state.categories
+  );
+  const { subcategories } = useSelector((state) => state.subcategories);
+
   const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [rawFeaturedProducts, setRawFeaturedProducts] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(4);
   const [touchStartX, setTouchStartX] = useState(null);
+
   const isFetchingRef = useRef(false);
+  const hasFetchedSubcategories = useRef(false);
   const containerRef = useRef(null);
   const scrollAccumulator = useRef(0);
   const scrollTimeout = useRef(null);
   const autoScrollRef = useRef(null);
   const isUserInteracting = useRef(false);
-  const rafRef = useRef(null); // For requestAnimationFrame
+  const rafRef = useRef(null);
 
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
   const total = featuredProducts.length;
 
   // Detect mobile
@@ -251,71 +262,86 @@ const FeaturedProducts = () => {
     return () => window.removeEventListener("resize", updateItemsPerPage);
   }, []);
 
-  // Fetch products
-  // Fetch products - OPTIMIZED for your existing API
+  // ✅ Step 1: Fetch categories from Redux
   useEffect(() => {
-    const fetchFeaturedProducts = async () => {
-      // ✅ Prevent duplicate fetches
-      if (isFetchingRef.current) {
-        //console.log("Already fetching, skipping...");
+    if (categories.length === 0 && !categoriesLoading) {
+      dispatch(getCategories());
+    }
+  }, [dispatch, categories.length, categoriesLoading]);
+
+  // ✅ Step 2: Fetch subcategories for each category
+  useEffect(() => {
+    if (
+      categories.length > 0 &&
+      !hasFetchedSubcategories.current &&
+      !isFetchingRef.current
+    ) {
+      hasFetchedSubcategories.current = true;
+
+      categories.forEach((category) => {
+        const hasSubcats = subcategories.some(
+          (sub) => sub.category === category._id
+        );
+
+        if (!hasSubcats) {
+          dispatch(getSubcategoriesByCategory(category._id));
+        }
+      });
+    }
+  }, [dispatch, categories, subcategories]);
+
+  // ✅ Step 3: Build featured products from Redux data
+  useEffect(() => {
+    const buildFeaturedProducts = async () => {
+      if (isFetchingRef.current || subcategories.length === 0) {
         return;
+      }
+
+      // Check cache first
+      const cacheKey = "featured_raw_products";
+      const cached = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(`${cacheKey}_time`);
+      const now = Date.now();
+      const cacheExpiry = 3600000; // 1 hour
+
+      if (cached && cacheTime && now - parseInt(cacheTime) < cacheExpiry) {
+        try {
+          const parsedCache = JSON.parse(cached);
+          if (parsedCache && parsedCache.length > 0) {
+            setFeaturedProducts(parsedCache);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error("Cache parse error", e);
+        }
       }
 
       try {
         isFetchingRef.current = true;
         setLoading(true);
 
-        // ✅ Fetch categories
-        const categoriesRes = await fetch(`${API_BASE_URL}/category`);
-        const categoriesData = await categoriesRes.json();
-        const categories = categoriesData.data || [];
-
-        if (categories.length === 0) {
-          setRawFeaturedProducts([]);
-          setError(null);
-          setLoading(false);
-          return;
-        }
-
-        // ✅ Fetch all subcategories in parallel
-        const subcategoryPromises = categories.map(async (category) => {
+        // ✅ Fetch products for each subcategory
+        const productPromises = subcategories.map(async (subcat) => {
           try {
-            const subcategoriesRes = await fetch(
-              `${API_BASE_URL}/sub-category/category/${category._id}`
-            );
-            const subcategoriesData = await subcategoriesRes.json();
-            const subcategories = subcategoriesData.data || [];
+            const result = await dispatch(
+              getProductsBySubcategory({
+                subcategoryId: subcat._id,
+                page: 1,
+                limit: 1,
+              })
+            ).unwrap();
 
-            return subcategories.map((subcat) => ({
-              ...subcat,
-              categoryName: category.name,
-              categoryId: category._id,
-            }));
-          } catch (err) {
-            console.error(
-              `Failed to fetch subcategories for ${category.name}`,
-              err
-            );
-            return [];
-          }
-        });
-
-        const allSubcatsNested = await Promise.all(subcategoryPromises);
-        const allSubcats = allSubcatsNested.flat();
-
-        // ✅ Fetch products from all subcategories in parallel
-        const productPromises = allSubcats.map(async (subcat) => {
-          try {
-            const productsRes = await fetch(
-              `${API_BASE_URL}/product/subcategory/${subcat._id}?page=1&limit=1&isActive=true`
-            );
-            const productsData = await productsRes.json();
-            const product = productsData.data?.products?.[0];
+            const product = result?.products?.[0];
 
             if (product) {
+              const category = categories.find(
+                (cat) => cat._id === subcat.category
+              );
+
               return {
                 ...product,
-                categoryName: subcat.categoryName,
+                categoryName: category?.name || "Unknown",
                 subcategoryName: subcat.name,
               };
             }
@@ -326,13 +352,12 @@ const FeaturedProducts = () => {
           }
         });
 
-        // ✅ Wait for all products to fetch
-        const allProducts = await Promise.all(productPromises);
-        const products = allProducts.filter((p) => p !== null);
+        const allFetchedProducts = await Promise.all(productPromises);
+        const validProducts = allFetchedProducts.filter((p) => p !== null);
 
-        // ✅ Remove duplicates (same product in multiple subcategories)
+        // ✅ Remove duplicates
         const seenIds = new Set();
-        const uniqueProducts = products.filter((product) => {
+        const uniqueProducts = validProducts.filter((product) => {
           if (seenIds.has(product._id)) return false;
           seenIds.add(product._id);
           return true;
@@ -341,69 +366,24 @@ const FeaturedProducts = () => {
         // ✅ Shuffle for variety
         const shuffled = uniqueProducts.sort(() => Math.random() - 0.5);
 
-        //console.log(
-        //  `Fetched ${products.length} products (${uniqueProducts.length} unique) from ${allSubcats.length} subcategories`
-        //);
+        setFeaturedProducts(shuffled);
 
-        setRawFeaturedProducts(shuffled);
+        // Cache results
+        localStorage.setItem(cacheKey, JSON.stringify(shuffled));
+        localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+
         setError(null);
       } catch (err) {
-        console.error("Error fetching featured products:", err);
+        console.error("Error building featured products:", err);
         setError("Failed to load featured products");
-        setRawFeaturedProducts([]);
       } finally {
         setLoading(false);
         isFetchingRef.current = false;
       }
     };
 
-    // Check cache first
-    const cacheKey = "featured_raw_products";
-    const cached = localStorage.getItem(cacheKey);
-    const cacheTime = localStorage.getItem(`${cacheKey}_time`);
-    const now = Date.now();
-    const cacheExpiry = 3600000; // 1 hour
-
-    if (cached && cacheTime && now - parseInt(cacheTime) < cacheExpiry) {
-      try {
-        const parsedCache = JSON.parse(cached);
-        if (parsedCache && parsedCache.length > 0) {
-          //console.log("Using cached data");
-          setRawFeaturedProducts(parsedCache);
-          setLoading(false);
-          return; // ✅ Don't fetch if cache is valid
-        }
-      } catch (e) {
-        console.error("Cache parse error", e);
-      }
-    }
-
-    fetchFeaturedProducts();
-  }, [API_BASE_URL]); // Only depends on API_BASE_URL
-
-  useEffect(() => {
-    if (rawFeaturedProducts.length === 0) {
-      setFeaturedProducts([]);
-      return;
-    }
-
-    const cacheKey = "featured_raw_products";
-
-    // ✅ REMOVE DUPLICATES by tracking seen product IDs
-    const seenIds = new Set();
-    const uniqueProducts = rawFeaturedProducts.filter((product) => {
-      // Skip if we've already seen this product ID
-      if (seenIds.has(product._id)) return false;
-
-      // Add to seen set and include this product
-      seenIds.add(product._id);
-      return true;
-    });
-
-    setFeaturedProducts(uniqueProducts);
-    localStorage.setItem(cacheKey, JSON.stringify(uniqueProducts));
-    localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
-  }, [rawFeaturedProducts]);
+    buildFeaturedProducts();
+  }, [dispatch, categories, subcategories]);
 
   // Preload the first product image if mobile (for LCP optimization)
   useEffect(() => {
@@ -451,7 +431,6 @@ const FeaturedProducts = () => {
         rect.bottom >= window.innerHeight / 2;
       if (!isInCardsArea) return;
 
-      //e.preventDefault();
       scrollAccumulator.current += e.deltaY;
 
       const threshold = 100;
@@ -480,7 +459,6 @@ const FeaturedProducts = () => {
   useEffect(() => {
     if (isMobile) {
       const animate = () => {
-        // Any animation logic here if needed; currently used for rafRef cleanup
         rafRef.current = requestAnimationFrame(animate);
       };
       animate();
@@ -523,10 +501,8 @@ const FeaturedProducts = () => {
 
       if (Math.abs(distance) > minSwipeDistance) {
         if (distance > 0) {
-          // Swipe left -> next
           handleNext();
         } else {
-          // Swipe right -> previous
           handlePrevious();
         }
       }
@@ -603,10 +579,10 @@ const FeaturedProducts = () => {
         <div
           ref={containerRef}
           className={`relative ${
-            isMobile ? "h-[400px]" : "h-[600px]" // Slightly shorter on mobile
+            isMobile ? "h-[400px]" : "h-[600px]"
           } flex items-center justify-center transform-gpu sm:overflow-visible overflow-x-hidden`}
           style={{
-            perspective: isMobile ? "500px" : "900px", // Reduced perspective on mobile
+            perspective: isMobile ? "500px" : "900px",
             perspectiveOrigin: "center center",
           }}
           onTouchStart={isMobile ? onTouchStart : undefined}
@@ -660,7 +636,7 @@ const FeaturedProducts = () => {
           }
           @media (max-width: 768px) {
             .transform-gpu {
-              perspective: 400px; // Further reduced for mobile
+              perspective: 400px;
             }
           }
         `}
