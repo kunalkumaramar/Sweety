@@ -7,7 +7,6 @@ import { store } from "./Redux/store";
 import Home from "./pages/Home";
 import Products from "./components/Products";
 import ProductDetail from "./components/ProductDetail";
-import SearchResults from "./components/SearchResults";
 import Wishlist from "./components/Wishlist";
 import Cart from "./components/cart";
 import UserProfile from "./pages/UserProfile";
@@ -83,8 +82,6 @@ const AppContent = () => {
       <Route path="/cart" element={<DefaultLayout><Cart /></DefaultLayout>} />
       <Route path="/wishlist" element={<DefaultLayout><Wishlist /></DefaultLayout>} />
 
-      {/* Search */}
-      <Route path="/search" element={<DefaultLayout><SearchResults /></DefaultLayout>} />
 
       {/* User Profile */}
       <Route path="/profile" element={<DefaultLayout><UserProfile /></DefaultLayout>} />
