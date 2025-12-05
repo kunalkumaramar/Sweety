@@ -849,7 +849,7 @@ const Cart = () => {
               saved temporarily.
               <button
                 onClick={() => setShowSignIn(true)}
-                className="underline ml-1 text-pink-600 hover:text-pink-700"
+                className="underline ml-1 mr-1 text-pink-600 hover:text-pink-700"
               >
                 Login
               </button>
