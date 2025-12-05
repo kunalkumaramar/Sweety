@@ -157,7 +157,7 @@ const CartItem = ({ item, updateQuantity, deleteItem }) => {
       <img
         src={item.selectedImage || item.product?.images?.[0] || item.image}
         alt={item.product?.name || item.name}
-        className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg object-cover flex-shrink-0 cursor-pointer hover:scale-105 transition-transform duration-300"
+        className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg object-cover shrink-0 cursor-pointer hover:scale-105 transition-transform duration-300"
         onClick={goToDetail}
         loading="lazy"
       />
