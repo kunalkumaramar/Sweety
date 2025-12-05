@@ -20,8 +20,6 @@ import {
   removeDiscountAsync,
   removeGuestDiscountAsync,
 } from "../Redux/slices/cartSlice";
-;
-
 // CouponSection Component
 const CouponSection = ({
   onApplyDiscount,
@@ -269,13 +267,15 @@ const Checkout = () => {
     //console.log("Is Authenticated:", isAuthenticated);
 
     if (user) {
-      {/*console.log("User has data:", {
+      {
+        /*console.log("User has data:", {
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone,
         addresses: user.addresses,
         addressesLength: user.addresses?.length,
-      });*/}
+      });*/
+      }
 
       // Set user's full name and phone
       const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
@@ -359,36 +359,60 @@ const Checkout = () => {
         newErrors.guestPhone = "Invalid phone number";
       }
     }
-    if (!shippingAddress.name.trim()) newErrors.name = "Name is required";
-    if (!shippingAddress.addressLine1.trim())
-      newErrors.addressLine1 = "Address is required";
-    if (!shippingAddress.city.trim()) newErrors.city = "City is required";
-    if (!shippingAddress.state.trim()) newErrors.state = "State is required";
-    if (!shippingAddress.pinCode.trim())
-      newErrors.pinCode = "PIN code is required";
-    if (!/^\d{6}$/.test(shippingAddress.pinCode))
-      newErrors.pinCode = "Invalid PIN code";
-    if (!shippingAddress.phone.trim()) newErrors.phone = "Phone is required";
-    if (!/^\d{10}$/.test(shippingAddress.phone))
-      newErrors.phone = "Invalid phone number";
 
+    // Validate shipping address
+    // Only validate name and phone for authenticated users
+    if (isAuthenticated) {
+      if (!shippingAddress.name.trim()) {
+        newErrors.name = "Name is required";
+      }
+      if (!shippingAddress.phone.trim()) {
+        newErrors.phone = "Phone is required";
+      } else if (!/^\d{10}$/.test(shippingAddress.phone)) {
+        newErrors.phone = "Invalid phone number";
+      }
+    }
+
+    // Common shipping address validations (for both guest and authenticated)
+    if (!shippingAddress.addressLine1.trim()) {
+      newErrors.addressLine1 = "Address is required";
+    }
+    if (!shippingAddress.city.trim()) {
+      newErrors.city = "City is required";
+    }
+    if (!shippingAddress.state.trim()) {
+      newErrors.state = "State is required";
+    }
+    if (!shippingAddress.pinCode.trim()) {
+      newErrors.pinCode = "PIN code is required";
+    } else if (!/^\d{6}$/.test(shippingAddress.pinCode)) {
+      newErrors.pinCode = "Invalid PIN code";
+    }
+
+    // Validate billing address if different from shipping
     if (!useSameAddress) {
-      if (!billingAddress.name.trim())
+      if (!billingAddress.name.trim()) {
         newErrors.billingName = "Billing name is required";
-      if (!billingAddress.addressLine1.trim())
+      }
+      if (!billingAddress.addressLine1.trim()) {
         newErrors.billingAddress = "Billing address is required";
-      if (!billingAddress.city.trim())
+      }
+      if (!billingAddress.city.trim()) {
         newErrors.billingCity = "Billing city is required";
-      if (!billingAddress.state.trim())
+      }
+      if (!billingAddress.state.trim()) {
         newErrors.billingState = "Billing state is required";
-      if (!billingAddress.pinCode.trim())
+      }
+      if (!billingAddress.pinCode.trim()) {
         newErrors.billingPinCode = "Billing PIN code is required";
-      if (!/^\d{6}$/.test(billingAddress.pinCode))
+      } else if (!/^\d{6}$/.test(billingAddress.pinCode)) {
         newErrors.billingPinCode = "Invalid billing PIN code";
-      if (!billingAddress.phone.trim())
+      }
+      if (!billingAddress.phone.trim()) {
         newErrors.billingPhone = "Billing phone is required";
-      if (!/^\d{10}$/.test(billingAddress.phone))
+      } else if (!/^\d{10}$/.test(billingAddress.phone)) {
         newErrors.billingPhone = "Invalid billing phone number";
+      }
     }
 
     setErrors(newErrors);
@@ -855,29 +879,32 @@ const Checkout = () => {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 Shipping Address
               </h2>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={shippingAddress.name}
-                    onChange={handleShippingChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 ${
-                      errors.name ? "border-red-500" : "border-gray-300"
-                    }`}
-                  />
-                  {errors.name && (
-                    <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-                  )}
-                </div>
+                {/* Only show Full Name field for authenticated users */}
+                {isAuthenticated && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Full Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={shippingAddress.name}
+                      onChange={handleShippingChange}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 ${
+                        errors.name ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {errors.name && (
+                      <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+                    )}
+                  </div>
+                )}
 
+                {/* Address Line 1 */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Address Line 1 *
+                    Address Line 1 <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -895,6 +922,7 @@ const Checkout = () => {
                   )}
                 </div>
 
+                {/* Address Line 2 - keep as is */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Address Line 2
@@ -908,9 +936,10 @@ const Checkout = () => {
                   />
                 </div>
 
+                {/* City */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    City *
+                    City <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -926,9 +955,10 @@ const Checkout = () => {
                   )}
                 </div>
 
+                {/* State */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    State *
+                    State <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -944,9 +974,10 @@ const Checkout = () => {
                   )}
                 </div>
 
+                {/* PIN Code */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    PIN Code *
+                    PIN Code <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -965,24 +996,29 @@ const Checkout = () => {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone *
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={shippingAddress.phone}
-                    onChange={handleShippingChange}
-                    maxLength="10"
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 ${
-                      errors.phone ? "border-red-500" : "border-gray-300"
-                    }`}
-                  />
-                  {errors.phone && (
-                    <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
-                  )}
-                </div>
+                {/* Only show Phone field for authenticated users */}
+                {isAuthenticated && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={shippingAddress.phone}
+                      onChange={handleShippingChange}
+                      maxLength="10"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 ${
+                        errors.phone ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {errors.phone && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.phone}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
