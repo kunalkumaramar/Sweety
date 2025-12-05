@@ -13,6 +13,13 @@ class ApiService {
     const url = `${this.baseURL}${endpoint}`;
     const token = localStorage.getItem("token");
 
+    // ✅ ADD THIS DEBUG LOG
+    console.log(
+      "🔐 Token being sent:",
+      token ? `${token.substring(0, 20)}...` : "NO TOKEN"
+    );
+    console.log("🔐 Is Authenticated:", !!token);
+    console.log("🔐 Endpoint:", endpoint);
     const config = {
       headers: {
         "Content-Type": "application/json",
@@ -20,6 +27,9 @@ class ApiService {
       },
       ...options,
     };
+
+    // ✅ ADD THIS DEBUG LOG
+    console.log("🔐 Request headers:", config.headers);
 
     // For debugging
     if (options.method === "POST" && options.body) {
@@ -461,9 +471,18 @@ class ApiService {
   // PAYMENT APIs
   // ========================================================================
   async initiatePayment(orderId, method = "razorpay") {
+    // ✅ Don't send guestEmail for authenticated users
+    // Let the backend use the token to identify the user
+    const requestBody = {
+      orderId,
+      method,
+    };
+
+    console.log("📧 Payment request body (authenticated):", requestBody);
+
     return this.request("/payments/initiate", {
       method: "POST",
-      body: JSON.stringify({ orderId, method }),
+      body: JSON.stringify(requestBody),
     });
   }
 

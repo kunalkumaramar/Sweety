@@ -151,6 +151,9 @@ const Checkout = () => {
     (state) => state.payment
   );
 
+  // ✅ Add this state to store user email
+  const [userEmail, setUserEmail] = useState("");
+
   // Guest user information (for non-authenticated users)
   const [guestInfo, setGuestInfo] = useState({
     firstName: "",
@@ -212,9 +215,9 @@ const Checkout = () => {
     const fetchUserData = async () => {
       if (isAuthenticated && !user) {
         try {
-          //console.log("🔄 Fetching user profile...");
+          console.log("🔄 Fetching user profile...");
           const response = await apiService.getUserProfile();
-          //console.log("✅ User profile fetched:", response.data);
+          console.log("✅ User profile fetched:", response.data);
 
           // Update Redux with user data (if you have an action for this)
           // dispatch(setUser(response.data));
@@ -222,6 +225,9 @@ const Checkout = () => {
           // OR use local state as a workaround
           const userData = response.data;
 
+          // ✅ Store user email
+          setUserEmail(userData.email || "");
+          localStorage.setItem("userEmail", userData.email || "");
           // Pre-fill immediately with fetched data
           const fullName = `${userData.firstName || ""} ${
             userData.lastName || ""
@@ -241,17 +247,17 @@ const Checkout = () => {
               phone: userPhone,
             });
 
-            //console.log("✅ Address pre-filled");
+            console.log("✅ Address pre-filled");
           } else {
             setShippingAddress((prev) => ({
               ...prev,
               name: fullName,
               phone: userPhone,
             }));
-            //console.log("✅ Name and phone pre-filled (no saved address)");
+            console.log("✅ Name and phone pre-filled (no saved address)");
           }
         } catch (error) {
-          //console.error("❌ Failed to fetch user profile:", error);
+          console.error("❌ Failed to fetch user profile:", error);
         }
       }
     };
@@ -262,19 +268,25 @@ const Checkout = () => {
   // Pre-fill user data if available
   // Pre-fill user data if available - WITH DEBUG LOGGING
   useEffect(() => {
-    //console.log("🔍 Pre-fill useEffect triggered");
-    //console.log("User object:", user);
-    //console.log("Is Authenticated:", isAuthenticated);
+    console.log("🔍 Pre-fill useEffect triggered");
+    console.log("User object:", user);
+    console.log("Is Authenticated:", isAuthenticated);
 
     if (user) {
       {
-        /*console.log("User has data:", {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-        addresses: user.addresses,
-        addressesLength: user.addresses?.length,
-      });*/
+        console.log("User has data:", {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+          email: user.email,
+          addresses: user.addresses,
+          addressesLength: user.addresses?.length,
+        });
+      }
+
+      // ✅ Store user email
+      if (user.email) {
+        setUserEmail(user.email);
       }
 
       // Set user's full name and phone
@@ -591,9 +603,11 @@ const Checkout = () => {
         },
       },
       prefill: {
-        name: shippingAddress.name,
-        email: user?.email || "",
-        contact: shippingAddress.phone,
+        name: !isAuthenticated
+          ? `${guestInfo.firstName} ${guestInfo.lastName}`.trim()
+          : shippingAddress.name,
+        email: !isAuthenticated ? guestInfo.email : userEmail,
+        contact: !isAuthenticated ? guestInfo.phone : shippingAddress.phone,
       },
       theme: {
         color: "#EC4899",
@@ -648,6 +662,34 @@ const Checkout = () => {
         });
       }
 
+      // ✅ Prepare shipping and billing addresses based on user type
+      let finalShippingAddress;
+      let finalBillingAddress;
+
+      if (!isAuthenticated) {
+        // For guest users: Concatenate firstName + lastName for name, use phone from guestInfo
+        const guestFullName =
+          `${guestInfo.firstName} ${guestInfo.lastName}`.trim();
+
+        finalShippingAddress = {
+          ...shippingAddress,
+          name: guestFullName,
+          phone: guestInfo.phone,
+        };
+
+        finalBillingAddress = useSameAddress
+          ? finalShippingAddress
+          : {
+              ...billingAddress,
+              name: billingAddress.name || guestFullName,
+              phone: billingAddress.phone || guestInfo.phone,
+            };
+      } else {
+        // For authenticated users: Use addresses as-is
+        finalShippingAddress = shippingAddress;
+        finalBillingAddress = useSameAddress ? shippingAddress : billingAddress;
+      }
+
       const orderData = {
         items: cartItems.map((item) => ({
           product: item.product?.id || item.productId,
@@ -659,8 +701,8 @@ const Checkout = () => {
             item.selectedImage || item.product?.images?.[0] || item.image,
           productName: item.product?.name || item.name,
         })),
-        shippingAddress: useSameAddress ? shippingAddress : shippingAddress,
-        billingAddress: useSameAddress ? shippingAddress : billingAddress,
+        shippingAddress: finalShippingAddress,
+        billingAddress: finalBillingAddress,
         paymentMethod,
         notes: notes.trim(),
         subtotal: totals.subtotal,
@@ -675,7 +717,7 @@ const Checkout = () => {
       if (isAuthenticated) {
         // Authenticated user - use regular order API
         orderResult = await dispatch(createOrder(orderData)).unwrap();
-        orderId = orderResult.orderId || orderResult._id;
+        orderId = orderResult.orderId || orderResult.id;
       } else {
         // Guest user - use guest order API
         const guestOrderData = {
@@ -690,7 +732,7 @@ const Checkout = () => {
         };
 
         orderResult = await dispatch(createGuestOrder(guestOrderData)).unwrap();
-        orderId = orderResult.orderId || orderResult._id;
+        orderId = orderResult.orderId || orderResult.id;
       }
 
       if (!orderId) {
@@ -703,12 +745,25 @@ const Checkout = () => {
       let paymentResult;
 
       if (isAuthenticated) {
-        // Authenticated user payment
+        // Authenticated user payment - pass the user email
+        console.log(
+          "💳 Initiating payment for authenticated user with email:",
+          userEmail
+        );
+
         paymentResult = await dispatch(
-          initiatePayment({ orderId, method: paymentMethod })
+          initiatePayment({
+            orderId,
+            method: paymentMethod,
+          })
         ).unwrap();
       } else {
-        // Guest user payment
+        // Guest user payment - pass guestEmail
+        console.log(
+          "💳 Initiating payment for guest with email:",
+          guestInfo.email
+        );
+
         paymentResult = await dispatch(
           initiateGuestPayment({
             orderId,
