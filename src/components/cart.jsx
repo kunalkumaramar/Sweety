@@ -483,7 +483,7 @@ const CouponSection = ({
           />
           <button
             onClick={handleApplyCoupon}
-            disabled={!couponCode.trim() || loading || !isAuthenticated}
+            disabled={!couponCode.trim() || loading}
             className="bg-pink-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Applying..." : "Apply"}
