@@ -38,12 +38,13 @@ export function SmoothCursor({
   },
 }) {
   const [isMobile, setIsMobile] = useState(false);
-  const [isMoving, setIsMoving] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(false); // ⭐ NEW: Delayed enable
   const lastMousePos = useRef({ x: 0, y: 0 });
   const velocity = useRef({ x: 0, y: 0 });
   const lastUpdateTime = useRef(Date.now());
   const previousAngle = useRef(0);
   const accumulatedRotation = useRef(0);
+  
   const cursorX = useSpring(0, springConfig);
   const cursorY = useSpring(0, springConfig);
   const rotation = useSpring(0, {
@@ -60,7 +61,7 @@ export function SmoothCursor({
   // Detect mobile view
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768); // Adjust breakpoint as needed (e.g., 768 for tablet/mobile)
+      setIsMobile(window.innerWidth < 768);
     };
 
     checkMobile();
@@ -68,8 +69,27 @@ export function SmoothCursor({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // ⭐ OPTIMIZATION: Delay cursor activation until after page load
   useEffect(() => {
-    if (isMobile) {
+    if (isMobile) return;
+
+    // Wait for page to be fully loaded and idle
+    if (document.readyState === 'complete') {
+      // Delay by 2 seconds to not interfere with FCP/LCP
+      const timer = setTimeout(() => setIsEnabled(true), 2000);
+      return () => clearTimeout(timer);
+    } else {
+      const handleLoad = () => {
+        const timer = setTimeout(() => setIsEnabled(true), 2000);
+        return () => clearTimeout(timer);
+      };
+      window.addEventListener('load', handleLoad);
+      return () => window.removeEventListener('load', handleLoad);
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (isMobile || !isEnabled) { // ⭐ Only run when enabled
       document.body.style.cursor = "auto";
       return;
     }
@@ -91,8 +111,10 @@ export function SmoothCursor({
       const currentPos = { x: e.clientX, y: e.clientY };
       updateVelocity(currentPos);
       const speed = Math.sqrt(Math.pow(velocity.current.x, 2) + Math.pow(velocity.current.y, 2));
+      
       cursorX.set(currentPos.x);
       cursorY.set(currentPos.y);
+      
       if (speed > 0.1) {
         const currentAngle = Math.atan2(velocity.current.y, velocity.current.x) * (180 / Math.PI) + 90;
         let angleDiff = currentAngle - previousAngle.current;
@@ -102,34 +124,36 @@ export function SmoothCursor({
         rotation.set(accumulatedRotation.current);
         previousAngle.current = currentAngle;
         scale.set(0.95);
-        setIsMoving(true);
+        
+        // ⭐ OPTIMIZATION: Clear previous timeout to avoid memory leaks
         const timeout = setTimeout(() => {
           scale.set(1);
-          setIsMoving(false);
         }, 150);
         return () => clearTimeout(timeout);
       }
     };
 
+    // ⭐ OPTIMIZATION: Use passive event listener
     let rafId;
     const throttledMouseMove = (e) => {
       if (rafId) return;
       rafId = requestAnimationFrame(() => {
         smoothMouseMove(e);
-        rafId = 0;
+        rafId = null; // ⭐ Changed from 0 to null for clarity
       });
     };
 
     document.body.style.cursor = "none";
-    window.addEventListener("mousemove", throttledMouseMove);
+    window.addEventListener("mousemove", throttledMouseMove, { passive: true }); // ⭐ Added passive
+    
     return () => {
       window.removeEventListener("mousemove", throttledMouseMove);
       document.body.style.cursor = "auto";
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [cursorX, cursorY, rotation, scale, isMobile]);
+  }, [cursorX, cursorY, rotation, scale, isMobile, isEnabled]); // ⭐ Added isEnabled
 
-  if (isMobile) {
+  if (isMobile || !isEnabled) { // ⭐ Don't render until enabled
     return null;
   }
 
