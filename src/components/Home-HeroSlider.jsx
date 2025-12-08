@@ -16,13 +16,27 @@ const HeroSlider = () => {
     isMobile ? state.mobileBanners || {} : state.banners || {}
   );
 
-  // Banner image optimization helper
+  // Banner image optimization helper with responsive widths
   const optimizeBanner = (url) => {
     if (!url) return url;
+    // Default desktop transformation
     return url.replace(
       '/upload/',
       '/upload/f_auto,q_auto:eco,w_1920,c_limit/'
     );
+  };
+  
+  // Generate responsive image URLs for different viewports
+  const getResponsiveImageUrl = (url) => {
+    if (!url) return url;
+    const baseUrl = url.split('/upload/')[0] + '/upload/';
+    const path = url.split('/upload/')[1];
+    // Return multiple sizes for srcset
+    return {
+      mobile: baseUrl + 'f_auto,q_auto:eco,w_480,c_limit/' + path,
+      tablet: baseUrl + 'f_auto,q_auto:eco,w_768,c_limit/' + path,
+      desktop: baseUrl + 'f_auto,q_auto:eco,w_1920,c_limit/' + path,
+    };
   };
 
   // Handle window resize to update isMobile
@@ -143,21 +157,33 @@ const HeroSlider = () => {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
                 </div>
               )}
-              <img
-                src={optimizeBanner(banner.imageUrl)}
-                alt={banner.name}
-                className={`w-full h-full object-cover transition-opacity duration-300 ${
-                  loadedImages[index] ? "opacity-100" : "opacity-0"
-                }`}
-                loading={index === 0 ? "eager" : "lazy"}
-                onLoad={() => {
-                  setLoadedImages((prev) => {
-                    const newLoaded = [...prev];
-                    newLoaded[index] = true;
-                    return newLoaded;
-                  });
-                }}
-              />
+              <picture>
+                <source
+                  srcSet={getResponsiveImageUrl(banner.imageUrl).mobile}
+                  media="(max-width: 480px)"
+                />
+                <source
+                  srcSet={getResponsiveImageUrl(banner.imageUrl).tablet}
+                  media="(max-width: 768px)"
+                />
+                <img
+                  src={getResponsiveImageUrl(banner.imageUrl).desktop}
+                  srcSet={`${getResponsiveImageUrl(banner.imageUrl).desktop} 1920w, ${getResponsiveImageUrl(banner.imageUrl).tablet} 768w, ${getResponsiveImageUrl(banner.imageUrl).mobile} 480w`}
+                  sizes="(max-width: 480px) 480px, (max-width: 768px) 768px, 1920px"
+                  alt={banner.name}
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${
+                    loadedImages[index] ? "opacity-100" : "opacity-0"
+                  }`}
+                  loading={index === 0 ? "eager" : "lazy"}
+                  onLoad={() => {
+                    setLoadedImages((prev) => {
+                      const newLoaded = [...prev];
+                      newLoaded[index] = true;
+                      return newLoaded;
+                    });
+                  }}
+                />
+              </picture>
             </div>
           </div>
         ))}

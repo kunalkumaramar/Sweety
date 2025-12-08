@@ -4,7 +4,6 @@ import { useCart } from "../hooks/useCart";
 import { useNavigate } from "react-router-dom";
 import React, { useEffect, useRef, useState } from "react";
 import SignIn from "../pages/SignIn";
-import { gsap } from "gsap";
 
 // ⭐ Reusable Wishlist Item Component
 const WishlistItem = ({
@@ -19,25 +18,17 @@ const WishlistItem = ({
   // const itemId = item._id || item.id;
 
   useEffect(() => {
-    // GSAP hover animations
+    // CSS-based hover animations (no GSAP needed)
     const element = itemRef.current;
 
     const handleMouseEnter = () => {
-      gsap.to(element, {
-        scale: 1.02,
-        boxShadow: "0 8px 25px rgba(0,0,0,0.1)",
-        duration: 0.3,
-        ease: "power2.out",
-      });
+      element.style.transform = "scale(1.02)";
+      element.style.boxShadow = "0 8px 25px rgba(0,0,0,0.1)";
     };
 
     const handleMouseLeave = () => {
-      gsap.to(element, {
-        scale: 1,
-        boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-        duration: 0.3,
-        ease: "power2.out",
-      });
+      element.style.transform = "scale(1)";
+      element.style.boxShadow = "0 2px 10px rgba(0,0,0,0.05)";
     };
 
     element.addEventListener("mouseenter", handleMouseEnter);
@@ -56,14 +47,17 @@ const WishlistItem = ({
 
 
   const handleRemove = () => {
-    // Animate removal
-    gsap.to(itemRef.current, {
-      x: -100,
-      opacity: 0,
-      duration: 0.3,
-      ease: "power2.in",
-      onComplete: () => removeFromWishlist(item.id || item._id),
-    });
+    // Animate removal with CSS
+    if (itemRef.current) {
+      itemRef.current.style.transition = "all 0.3s ease-in";
+      itemRef.current.style.transform = "translateX(-100px)";
+      itemRef.current.style.opacity = "0";
+      
+      // Remove from wishlist after animation completes
+      setTimeout(() => {
+        removeFromWishlist(item.id || item._id);
+      }, 300);
+    }
   };
 
   const handleMoveToCart = async () => {
@@ -112,13 +106,12 @@ const WishlistItem = ({
       );
 
       if (result && result.success) {
-        // FIX #2: Immediately animate and remove from UI
-        gsap.to(itemRef.current, {
-          x: 100,
-          opacity: 0,
-          duration: 0.3,
-          ease: 'power2.in',
-        });
+        // FIX #2: Immediately animate and remove from UI with CSS
+        if (itemRef.current) {
+          itemRef.current.style.transition = "all 0.3s ease-in";
+          itemRef.current.style.transform = "translateX(100px)";
+          itemRef.current.style.opacity = "0";
+        }
       }
     } catch (error) {
       console.error('Failed to move item to cart:', error);
@@ -318,21 +311,13 @@ const RecommendationItem = ({ item, addToWishlist }) => {
     const element = itemRef.current;
 
     const handleMouseEnter = () => {
-      gsap.to(element, {
-        y: -5,
-        boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-        duration: 0.3,
-        ease: "power2.out",
-      });
+      element.style.transform = "translateY(-5px)";
+      element.style.boxShadow = "0 10px 25px rgba(0,0,0,0.1)";
     };
 
     const handleMouseLeave = () => {
-      gsap.to(element, {
-        y: 0,
-        boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-        duration: 0.3,
-        ease: "power2.out",
-      });
+      element.style.transform = "translateY(0)";
+      element.style.boxShadow = "0 2px 10px rgba(0,0,0,0.05)";
     };
 
     element.addEventListener("mouseenter", handleMouseEnter);
@@ -429,52 +414,66 @@ const Wishlist = () => {
         const categoriesData = await categoriesRes.json();
         const categories = categoriesData.data || [];
 
-        const products = [];
-
-        for (const category of categories) {
-          // Fetch subcategories
-          const subcategoriesRes = await fetch(`${API_BASE_URL}/sub-category/category/${category._id}`);
-          const subcategoriesData = await subcategoriesRes.json();
-          const subcategories = subcategoriesData.data || [];
-
+        // Step 1: Fetch all subcategories in parallel
+        const categorySubcategoryPromises = categories.map(category =>
+          fetch(`${API_BASE_URL}/sub-category/category/${category._id}`)
+            .then(res => res.json())
+            .then(data => ({
+              category,
+              subcategories: data.data || []
+            }))
+        );
+        
+        const categorySubcategoryResults = await Promise.all(categorySubcategoryPromises);
+        
+        // Step 2: Build all product fetch promises
+        const productFetchPromises = [];
+        categorySubcategoryResults.forEach(({ category, subcategories }) => {
           if (subcategories.length > 0) {
-            // If subcategories exist, fetch one product from each
-            for (const subcategory of subcategories) {
-              const productsRes = await fetch(
+            // Fetch products from each subcategory in parallel
+            subcategories.forEach(subcategory => {
+              const productPromise = fetch(
                 `${API_BASE_URL}/product/subcategory/${subcategory._id}?page=1&limit=2&isActive=true`
-              );
-              const productsData = await productsRes.json();
-              const latestProducts = productsData.data?.products || [];
-              
-              latestProducts.forEach(latestProduct => {
-                if (latestProduct) {
-                  products.push({
-                    ...latestProduct,
-                    categoryName: category.name,
-                    subcategoryName: subcategory.name
-                  });
-                }
+              )
+                .then(res => res.json())
+                .then(data => ({
+                  categoryName: category.name,
+                  subcategoryName: subcategory.name,
+                  products: data.data?.products || []
+                }));
+              productFetchPromises.push(productPromise);
+            });
+          } else {
+            // Fetch products directly from category if no subcategories
+            const productPromise = fetch(
+              `${API_BASE_URL}/product/category/${category._id}?page=1&limit=2&isActive=true`
+            )
+              .then(res => res.json())
+              .then(data => ({
+                categoryName: category.name,
+                subcategoryName: null,
+                products: data.data?.products || []
+              }));
+            productFetchPromises.push(productPromise);
+          }
+        });
+
+        // Step 3: Wait for all product fetches in parallel
+        const productResults = await Promise.all(productFetchPromises);
+        
+        // Step 4: Flatten results
+        const products = [];
+        productResults.forEach(({ categoryName, subcategoryName, products: prods }) => {
+          prods.forEach(product => {
+            if (product) {
+              products.push({
+                ...product,
+                categoryName,
+                subcategoryName
               });
             }
-          } else {
-            // If no subcategories, fetch directly from category
-            const productsRes = await fetch(
-              `${API_BASE_URL}/product/category/${category._id}?page=1&limit=2&isActive=true`
-            );
-            const productsData = await productsRes.json();
-            const latestProducts = productsData.data?.products || [];
-
-            latestProducts.forEach((latestProduct) => {
-              if (latestProduct) {
-                products.push({
-                  ...latestProduct,
-                  categoryName: category.name,
-                  subcategoryName: null
-                });
-              }
-            });
-          }
-        }
+          });
+        });
 
         setRawRecommendations(products);
       } catch (err) {
@@ -521,13 +520,17 @@ const Wishlist = () => {
   const getTotalItems = () => count || wishlistItems.length;
 
   useEffect(() => {
-    // Initial animation for the entire container
+    // Initial animation for the entire container using CSS
     if (containerRef.current) {
-      gsap.fromTo(
-        containerRef.current,
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }
-      );
+      containerRef.current.style.opacity = "0";
+      containerRef.current.style.transform = "translateY(20px)";
+      
+      // Trigger animation
+      requestAnimationFrame(() => {
+        containerRef.current.style.transition = "all 0.6s ease-out";
+        containerRef.current.style.opacity = "1";
+        containerRef.current.style.transform = "translateY(0)";
+      });
     }
   }, []);
 

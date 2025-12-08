@@ -26,8 +26,10 @@ import ScrollToTop from "./components/ScrollToTop";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Checkout from "./components/Checkout";
-import { SmoothCursor } from "./components/SmoothCursor";
 import GoogleCallback from "./components/GoogleCallback";
+
+// Lazy load SmoothCursor to prevent framer-motion from blocking initial render
+const SmoothCursor = React.lazy(() => import("./components/SmoothCursor").then(m => ({ default: m.SmoothCursor })));
 
 // Context Providers
 import { CartProvider } from "./components/CartContext";
@@ -41,7 +43,9 @@ const DefaultLayout = ({ children }) => (
     <Navbar />
     {children}
     <Footer />
-    <SmoothCursor />
+    <React.Suspense fallback={null}>
+      <SmoothCursor />
+    </React.Suspense>
   </div>
 );
 
@@ -50,7 +54,9 @@ const NotFoundLayout = ({ children }) => (
   <div className="font-sans">
     <ScrollToTop />
     {children}
-    <SmoothCursor />
+    <React.Suspense fallback={null}>
+      <SmoothCursor />
+    </React.Suspense>
   </div>
 );
 
