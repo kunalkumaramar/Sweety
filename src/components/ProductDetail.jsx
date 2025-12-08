@@ -24,6 +24,15 @@ const ProductDetail = () => {
   const { addToCart: addToCartHandler } = useCart();
   const { addToWishlist, removeFromWishlist, isItemInWishlist } = useWishlist();
 
+  // Image optimization helper
+  const optimizeImage = (url, width = 1200) => {
+    if (!url) return url;
+    return url.replace(
+      '/upload/',
+      `/upload/f_webp,q_auto:eco,w_${width},c_limit/`
+    );
+  };
+
   // Redux state
   const {
     currentProduct,
@@ -690,8 +699,10 @@ const handleWishlistToggle = async () => {
                       </div>
                     )}
                     <img
-                      src={img}
+                      src={optimizeImage(img, 200)}
                       alt={`thumb-${idx}`}
+                      width="96"
+                      height="128"
                       className={`w-full h-32 object-cover transition-opacity duration-300 ${loadedImages[img] ? "opacity-100" : "opacity-0"}`}
                       loading="lazy"
                       onLoad={() => setLoadedImages(prev => ({...prev, [img]: true}))}
@@ -716,8 +727,10 @@ const handleWishlistToggle = async () => {
                   </div>
                 )}
                 <img
-                  src={currentImage || ""}
+                  src={optimizeImage(currentImage, 1200) || ""}
                   alt={`${currentProduct.name} - ${selectedColor?.colorName}`}
+                  width="690"
+                  height="690"
                   className={`w-full h-[690px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in ${loadedImages[currentImage] ? "opacity-100" : "opacity-0"}`}
                   loading="lazy"
                   onLoad={() => setLoadedImages(prev => ({...prev, [currentImage]: true}))}
@@ -767,8 +780,10 @@ const handleWishlistToggle = async () => {
                   </div>
                 )}
                 <img
-                  src={currentImage || ""}
+                  src={optimizeImage(currentImage, 768) || ""}
                   alt={`${currentProduct.name} - ${selectedColor?.colorName}`}
+                  width="460"
+                  height="460"
                   className={`w-full h-[460px] md:h-[500px] object-cover transition-transform duration-300 hover:scale-125 cursor-zoom-in ${loadedImages[currentImage] ? "opacity-100" : "opacity-0"}`}
                   loading="lazy"
                   onLoad={() => setLoadedImages(prev => ({...prev, [currentImage]: true}))}
@@ -816,8 +831,10 @@ const handleWishlistToggle = async () => {
                       </div>
                     )}
                     <img
-                      src={img}
+                      src={optimizeImage(img, 160)}
                       alt={`thumb-${idx}`}
+                      width="80"
+                      height="96"
                       className={`w-16 h-20 sm:w-20 sm:h-24 object-cover transition-opacity duration-300 ${loadedImages[img] ? "opacity-100" : "opacity-0"}`}
                       loading="lazy"
                       onLoad={() => setLoadedImages(prev => ({...prev, [img]: true}))}

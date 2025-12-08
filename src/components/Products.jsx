@@ -103,11 +103,11 @@ const Products = ({
   };
 
   // Image optimization helper
-  const optimizeImage = (url, width = 1920) => {
+  const optimizeImage = (url, width = 400) => {
     if (!url) return url;
     return url.replace(
       '/upload/',
-      `/upload/f_webp,q_auto:eco,w_${width}/`
+      `/upload/f_webp,q_auto:eco,w_${width},c_limit/`
     );
   };
 
@@ -510,8 +510,10 @@ return [...new Set(values)];
             </div>
           )}
           <img
-            src={optimizeImage(currentImage || product.colors?.[0]?.images?.[0])}
+            src={optimizeImage(currentImage || product.colors?.[0]?.images?.[0], 400)}
             alt={product.name}
+            width="300"
+            height="400"
             className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
             loading="lazy"
             onLoad={() => setLoaded(true)}
