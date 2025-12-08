@@ -12,7 +12,7 @@ import { getCategories } from "../Redux/slices/categorySlice";
 import { getSubcategoriesByCategory } from "../Redux/slices/subcategorySlice";
 import { getProductsBySubcategory } from "../Redux/slices/productsSlice";
 
-// ⭐ Cloudinary Image Component (unchanged)
+// Cloudinary Image Optimization Component
 const CloudinaryImage = forwardRef(
   (
     {
@@ -27,35 +27,12 @@ const CloudinaryImage = forwardRef(
     ref
   ) => {
     const [isMobile] = useState(window.innerWidth < 768);
-    const [shouldLoad, setShouldLoad] = useState(priority);
-    const imgRef = useRef(null);
 
-    useEffect(() => {
-      if (priority || shouldLoad) return;
-
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              setShouldLoad(true);
-              observer.disconnect();
-            }
-          });
-        },
-        { rootMargin: "50px" }
-      );
-
-      if (imgRef.current) {
-        observer.observe(imgRef.current);
-      }
-
-      return () => observer.disconnect();
-    }, [priority, shouldLoad]);
-
+    // Determine optimal width for src fallback
     const getOptimalWidth = () => {
       if (thumbnail) return 150;
       if (priority) return isMobile ? 800 : 1200;
-      return isMobile ? 400 : 600;
+      return isMobile ? 400 : 600; // Adjusted for product cards
     };
 
     const getQuality = () => {
@@ -79,6 +56,7 @@ const CloudinaryImage = forwardRef(
       return `${base}${newTransforms}/v${ver}/${path}${query || ""}`;
     };
 
+    // Generate srcSet for responsive images
     const generateSrcSet = () => {
       if (thumbnail || !src?.includes("cloudinary.com")) return undefined;
 
@@ -109,12 +87,9 @@ const CloudinaryImage = forwardRef(
 
     return (
       <img
-        ref={(node) => {
-          imgRef.current = node;
-          if (ref) ref.current = node;
-        }}
-        src={shouldLoad ? optimizeUrl(src) : undefined}
-        srcSet={shouldLoad ? generateSrcSet() : undefined}
+        ref={ref}
+        src={optimizeUrl(src)}
+        srcSet={generateSrcSet()}
         sizes={sizes}
         alt={alt}
         className={className}
@@ -126,60 +101,36 @@ const CloudinaryImage = forwardRef(
   }
 );
 
-// ⭐ FIXED: Circular Product Card with proper positioning
+// Helper function to get optimized URL (extracted for preload use)
+const getOptimizedUrl = (url, isMobile, width = 400) => {
+  if (!url?.includes("cloudinary.com")) return url;
+
+  const parts = url.match(
+    /(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)([^/]*)\/v(\d+)\/([^?]+)(\?.*)?/
+  );
+  if (!parts) return url;
+
+  const [, base, , ver, path, query] = parts;
+  const newTransforms = `f_auto,q_auto:eco,w_${width},c_limit`;
+
+  return `${base}${newTransforms}/v${ver}/${path}${query || ""}`;
+};
+
 const CircularProductCard = React.memo(
   ({ product, index, currentIndex, totalItems, isMobile, onCardClick }) => {
+    const isMainCard = index === currentIndex;
     const [loaded, setLoaded] = useState(false);
 
-    // ⭐ CRITICAL FIX: Calculate relative position for infinite loop
-    const getRelativePosition = () => {
-      let diff = index - currentIndex;
-      
-      // ⭐ Handle wrap-around for infinite loop
-      if (diff > totalItems / 2) {
-        diff -= totalItems;
-      } else if (diff < -totalItems / 2) {
-        diff += totalItems;
-      }
-      
-      return diff;
-    };
-
-    const relativePosition = getRelativePosition();
-    const isMainCard = relativePosition === 0;
-
-    // ⭐ Render cards within viewport range (both sides)
-    const distanceFromCenter = Math.abs(relativePosition);
-    const shouldRender = distanceFromCenter <= (isMobile ? 2 : 3);
-
-    // ⭐ FIXED: Transform calculations for proper circular positioning
     const cardTransform = useMemo(() => {
-      if (!shouldRender) {
-        return {
-          transform: "translate3d(0, 0, -1000px)", // Hide far behind
-          opacity: 0,
-          zIndex: -1,
-          pointerEvents: "none",
-        };
-      }
-
       const angleStep = (2 * Math.PI) / totalItems;
-      const angle = relativePosition * angleStep;
-      const radius = isMobile ? 160 : 350; // ⭐ Increased radius for better visibility
+      const angle = (index - currentIndex) * angleStep;
+      const radius = isMobile ? 140 : 320; // Smaller radius on mobile for performance
       const x = Math.sin(angle) * radius;
       const z = Math.cos(angle) * radius;
-      
-      // ⭐ FIXED: Better scaling curve
-      const scale = z > 0 
-        ? 1 
-        : Math.max(0.6, 0.6 + (z / radius) * 0.4); // Cards behind are smaller
-      
-      // ⭐ FIXED: Opacity for depth perception
-      const opacity = z > 0 
-        ? 1 
-        : Math.max(0.3, 0.3 + (z / radius) * 0.7);
-      
-      const tiltY = relativePosition === 0 ? 0 : x > 0 ? -15 : 15;
+      const scale =
+        z > 0 ? 1 : Math.max(isMobile ? 0.7 : 0.7, 0.7 + (z / radius) * 0.3); // Slightly larger min scale on mobile
+      const opacity = isMainCard ? 1 : isMobile ? 0.8 : 0.7; // Higher opacity on mobile to reduce flicker
+      const tiltY = isMainCard ? 0 : x > 0 ? -10 : 10; // Reduced tilt on mobile
 
       return {
         transform: `translate3d(${x}px, 0, ${z}px) rotateY(${
@@ -187,30 +138,26 @@ const CircularProductCard = React.memo(
         }rad) scale(${scale})`,
         opacity,
         zIndex: Math.round((z + radius) * 10),
-        pointerEvents: isMainCard ? "auto" : "none", // ⭐ Only main card clickable
       };
-    }, [relativePosition, totalItems, isMainCard, isMobile, shouldRender]);
+    }, [index, currentIndex, totalItems, isMainCard, isMobile]);
 
     const imageSrc =
       product.colors?.[0]?.images?.[0] ||
       product.images?.[0] ||
       "/placeholder.png";
 
-    const cardSizes = "(max-width: 768px) 140px, 265px";
-
-    if (!shouldRender) return null;
+    const cardSizes = "(max-width: 768px) 140px, 265px"; // Adjusted for smaller mobile
 
     return (
       <div
-        className="absolute transition-all duration-700 ease-out cursor-pointer will-change-transform"
+        className="absolute transition-all duration-500 ease-out cursor-pointer will-change-transform overflow-x-hidden"
         style={{
           transform: cardTransform.transform,
           opacity: cardTransform.opacity,
           zIndex: cardTransform.zIndex,
-          width: isMobile ? "140px" : "265px",
-          pointerEvents: cardTransform.pointerEvents,
+          width: isMobile ? "140px" : "265px", // Smaller width on mobile
         }}
-        onClick={() => isMainCard && onCardClick(product)}
+        onClick={() => onCardClick(product)}
       >
         <div className="bg-[#f9e2e7] overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-2">
           <div className="sm:p-4">
@@ -218,6 +165,8 @@ const CircularProductCard = React.memo(
               className="bg-white p-1 relative overflow-hidden"
               style={{ aspectRatio: "1 / 1.2" }}
             >
+              {" "}
+              {/* Reserve space for CLS */}
               {!loaded && (
                 <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -229,10 +178,11 @@ const CircularProductCard = React.memo(
                 className={`w-full h-full object-contain transition-all duration-300 hover:scale-105 ${
                   loaded ? "opacity-100" : "opacity-0"
                 }`}
-                priority={isMainCard}
+                priority={index === 0} // Only prioritize first card
                 sizes={cardSizes}
                 onLoad={() => setLoaded(true)}
               />
+              <div className="absolute inset-0 bg-transparent bg-opacity-0 hover:bg-opacity-10 transition-all duration-300"></div>
             </div>
           </div>
 
@@ -264,6 +214,7 @@ const CircularProductCard = React.memo(
 const FeaturedProducts = () => {
   const dispatch = useDispatch();
 
+  // ✅ Get data from Redux
   const { categories, loading: categoriesLoading } = useSelector(
     (state) => state.categories
   );
@@ -276,39 +227,17 @@ const FeaturedProducts = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(4);
   const [touchStartX, setTouchStartX] = useState(null);
-  const [isVisible, setIsVisible] = useState(false);
 
   const isFetchingRef = useRef(false);
   const hasFetchedSubcategories = useRef(false);
   const containerRef = useRef(null);
-  const sectionRef = useRef(null);
   const scrollAccumulator = useRef(0);
   const scrollTimeout = useRef(null);
   const autoScrollRef = useRef(null);
   const isUserInteracting = useRef(false);
+  const rafRef = useRef(null);
 
   const total = featuredProducts.length;
-
-  // Detect when section is visible
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setIsVisible(true);
-            observer.disconnect();
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
 
   // Detect mobile
   useEffect(() => {
@@ -333,17 +262,15 @@ const FeaturedProducts = () => {
     return () => window.removeEventListener("resize", updateItemsPerPage);
   }, []);
 
-  // Fetch categories
+  // ✅ Step 1: Fetch categories from Redux
   useEffect(() => {
-    if (!isVisible) return;
     if (categories.length === 0 && !categoriesLoading) {
       dispatch(getCategories());
     }
-  }, [dispatch, categories.length, categoriesLoading, isVisible]);
+  }, [dispatch, categories.length, categoriesLoading]);
 
-  // Fetch subcategories
+  // ✅ Step 2: Fetch subcategories for each category
   useEffect(() => {
-    if (!isVisible) return;
     if (
       categories.length > 0 &&
       !hasFetchedSubcategories.current &&
@@ -361,22 +288,21 @@ const FeaturedProducts = () => {
         }
       });
     }
-  }, [dispatch, categories, subcategories, isVisible]);
+  }, [dispatch, categories, subcategories]);
 
-  // Build featured products
+  // ✅ Step 3: Build featured products from Redux data
   useEffect(() => {
-    if (!isVisible) return;
-
     const buildFeaturedProducts = async () => {
       if (isFetchingRef.current || subcategories.length === 0) {
         return;
       }
 
+      // Check cache first
       const cacheKey = "featured_raw_products";
       const cached = localStorage.getItem(cacheKey);
       const cacheTime = localStorage.getItem(`${cacheKey}_time`);
       const now = Date.now();
-      const cacheExpiry = 3600000;
+      const cacheExpiry = 3600000; // 1 hour
 
       if (cached && cacheTime && now - parseInt(cacheTime) < cacheExpiry) {
         try {
@@ -393,15 +319,10 @@ const FeaturedProducts = () => {
 
       try {
         isFetchingRef.current = true;
+        setLoading(true);
 
-        const hideSpinnerTimer = setTimeout(() => {
-          setLoading(false);
-        }, 500);
-
-        const limitedSubcats = subcategories.slice(0, 8); // ⭐ Increased to 8 for better loop
-        const loadedProducts = [];
-
-        for (const subcat of limitedSubcats) {
+        // ✅ Fetch products for each subcategory
+        const productPromises = subcategories.map(async (subcat) => {
           try {
             const result = await dispatch(
               getProductsBySubcategory({
@@ -418,40 +339,39 @@ const FeaturedProducts = () => {
                 (cat) => cat._id === subcat.category
               );
 
-              const enrichedProduct = {
+              return {
                 ...product,
                 categoryName: category?.name || "Unknown",
                 subcategoryName: subcat.name,
               };
-
-              loadedProducts.push(enrichedProduct);
-
-              if (loadedProducts.length >= 4 && loading) {
-                setFeaturedProducts([...loadedProducts]);
-                clearTimeout(hideSpinnerTimer);
-                setLoading(false);
-              }
             }
+            return null;
           } catch (err) {
             console.error(`Failed to fetch product for ${subcat.name}`, err);
+            return null;
           }
-        }
+        });
 
+        const allFetchedProducts = await Promise.all(productPromises);
+        const validProducts = allFetchedProducts.filter((p) => p !== null);
+
+        // ✅ Remove duplicates
         const seenIds = new Set();
-        const uniqueProducts = loadedProducts.filter((product) => {
+        const uniqueProducts = validProducts.filter((product) => {
           if (seenIds.has(product._id)) return false;
           seenIds.add(product._id);
           return true;
         });
 
+        // ✅ Shuffle for variety
         const shuffled = uniqueProducts.sort(() => Math.random() - 0.5);
 
         setFeaturedProducts(shuffled);
 
+        // Cache results
         localStorage.setItem(cacheKey, JSON.stringify(shuffled));
         localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
 
-        clearTimeout(hideSpinnerTimer);
         setError(null);
       } catch (err) {
         console.error("Error building featured products:", err);
@@ -463,34 +383,47 @@ const FeaturedProducts = () => {
     };
 
     buildFeaturedProducts();
-  }, [dispatch, categories, subcategories, isVisible, loading]);
+  }, [dispatch, categories, subcategories]);
 
-  // Auto-scroll with infinite loop
+  // Preload the first product image if mobile (for LCP optimization)
   useEffect(() => {
-    if (!isMobile || total === 0 || !isVisible) return;
+    if (isMobile && featuredProducts.length > 0) {
+      const firstImage =
+        featuredProducts[0].colors?.[0]?.images?.[0] ||
+        featuredProducts[0].images?.[0];
+      if (firstImage) {
+        const preloadUrl = getOptimizedUrl(firstImage, isMobile, 400);
+        const link = document.createElement("link");
+        link.rel = "preload";
+        link.as = "image";
+        link.fetchPriority = "high";
+        link.href = preloadUrl;
+        document.head.appendChild(link);
+
+        return () => document.head.removeChild(link);
+      }
+    }
+  }, [featuredProducts, isMobile]);
+
+  // Auto-scroll (mobile)
+  useEffect(() => {
+    if (!isMobile || total === 0) return;
     const startAutoScroll = () => {
       if (autoScrollRef.current) clearInterval(autoScrollRef.current);
       autoScrollRef.current = setInterval(() => {
         if (!isUserInteracting.current) {
-          setCurrentIndex((prev) => (prev + 1) % total); // ⭐ Wraps infinitely
+          setCurrentIndex((prev) => (prev + 1) % total);
         }
       }, 3000);
     };
     startAutoScroll();
     return () => clearInterval(autoScrollRef.current);
-  }, [isMobile, total, isVisible]);
+  }, [isMobile, total]);
 
-  // Wheel scroll with infinite loop
+  // Wheel scroll (desktop)
   useEffect(() => {
-    if (isMobile || total === 0 || !isVisible) return;
-
-    let lastScrollTime = 0;
-    const scrollThrottle = 150;
-
+    if (isMobile || total === 0) return;
     const handleScroll = (e) => {
-      const now = Date.now();
-      if (now - lastScrollTime < scrollThrottle) return;
-
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const isInCardsArea =
@@ -503,17 +436,10 @@ const FeaturedProducts = () => {
       const threshold = 100;
       if (Math.abs(scrollAccumulator.current) >= threshold) {
         const direction = scrollAccumulator.current > 0 ? 1 : -1;
-        
-        // ⭐ FIXED: Infinite loop navigation
-        setCurrentIndex((prev) => {
-          const next = prev + direction;
-          if (next < 0) return total - 1; // Wrap to end
-          if (next >= total) return 0; // Wrap to start
-          return next;
-        });
-        
+        setCurrentIndex((prev) =>
+          direction > 0 ? Math.min(prev + 1, total - 1) : Math.max(prev - 1, 0)
+        );
         scrollAccumulator.current = 0;
-        lastScrollTime = now;
       }
 
       if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
@@ -522,14 +448,24 @@ const FeaturedProducts = () => {
       }, 150);
     };
 
-    window.addEventListener("wheel", handleScroll, { passive: true });
+    window.addEventListener("wheel", handleScroll, { passive: false });
     return () => {
       window.removeEventListener("wheel", handleScroll);
       if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
     };
-  }, [total, currentIndex, isMobile, isVisible]);
+  }, [total, currentIndex, isMobile]);
 
-  // ⭐ FIXED: Navigation with infinite loop
+  // Use requestAnimationFrame for smoother updates on mobile
+  useEffect(() => {
+    if (isMobile) {
+      const animate = () => {
+        rafRef.current = requestAnimationFrame(animate);
+      };
+      animate();
+      return () => cancelAnimationFrame(rafRef.current);
+    }
+  }, [isMobile]);
+
   const handlePrevious = useCallback(() => {
     if (isMobile) {
       isUserInteracting.current = true;
@@ -550,6 +486,7 @@ const FeaturedProducts = () => {
     window.location.href = `/product/${product._id}`;
   }, []);
 
+  // Touch handlers for swipe on mobile
   const onTouchStart = useCallback((e) => {
     setTouchStartX(e.targetTouches[0].clientX);
   }, []);
@@ -575,27 +512,19 @@ const FeaturedProducts = () => {
     [touchStartX, handleNext, handlePrevious]
   );
 
-  const progressWidth = `${((currentIndex + 1) / total) * 100}%`; // ⭐ Fixed progress calculation
+  const progressWidth = `${((currentIndex + itemsPerPage) / total) * 100}%`;
 
   if (loading) {
     return (
-      <div ref={sectionRef} className="w-full py-12 bg-white px-4">
+      <div className="w-full py-12 bg-white px-4">
         <h2
           className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-12 text-black tracking-wide"
           style={{ fontFamily: "Montaga, serif" }}
         >
           FEATURED PRODUCTS
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-7xl mx-auto">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-gray-200 animate-pulse rounded-lg">
-              <div className="aspect-[1/1.2] bg-gray-300"></div>
-              <div className="p-4 space-y-2">
-                <div className="h-4 bg-gray-300 rounded w-3/4 mx-auto"></div>
-                <div className="h-3 bg-gray-300 rounded w-1/2 mx-auto"></div>
-              </div>
-            </div>
-          ))}
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-pink-500"></div>
         </div>
       </div>
     );
@@ -603,7 +532,7 @@ const FeaturedProducts = () => {
 
   if (error || total === 0) {
     return (
-      <div ref={sectionRef} className="w-full py-12 bg-white px-4">
+      <div className="w-full py-12 bg-white px-4">
         <h2
           className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-12 text-black tracking-wide"
           style={{ fontFamily: "Montaga, serif" }}
@@ -618,7 +547,7 @@ const FeaturedProducts = () => {
   }
 
   return (
-    <div ref={sectionRef} className="w-full py-8 bg-white sm:py-12 lg:px-2">
+    <div className="w-full py-8 bg-white sm:py-12 lg:px-2">
       <h2
         className="text-2xl sm:text-3xl lg:text-6xl font-light text-center mb-8 sm:mb-12 text-black tracking-wide"
         style={{ fontFamily: "Montaga, serif" }}
@@ -627,12 +556,12 @@ const FeaturedProducts = () => {
       </h2>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Navigation - only on desktop */}
         {!isMobile && (
           <>
             <button
               onClick={handlePrevious}
               className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 rounded-sm shadow-lg transition-all duration-300 flex items-center justify-center bg-[#F9E2E7] hover:bg-pink-500 hover:shadow-xl hover:scale-105"
-              aria-label="Previous product"
             >
               <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </button>
@@ -640,21 +569,20 @@ const FeaturedProducts = () => {
             <button
               onClick={handleNext}
               className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-20 w-5 lg:w-8 h-12 sm:w-10 sm:h-14 rounded-sm shadow-lg transition-all duration-300 flex items-center justify-center bg-[#F9E2E7] hover:bg-pink-500 hover:shadow-xl hover:scale-105"
-              aria-label="Next product"
             >
               <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </button>
           </>
         )}
 
-        {/* ⭐ FIXED: Increased container height and removed overflow-x-hidden */}
+        {/* Circular Carousel */}
         <div
           ref={containerRef}
           className={`relative ${
-            isMobile ? "h-[450px]" : "h-[650px]"
-          } flex items-center justify-center transform-gpu overflow-visible`}
+            isMobile ? "h-[400px]" : "h-[600px]"
+          } flex items-center justify-center transform-gpu sm:overflow-visible overflow-x-hidden`}
           style={{
-            perspective: isMobile ? "600px" : "1000px",
+            perspective: isMobile ? "500px" : "900px",
             perspectiveOrigin: "center center",
           }}
           onTouchStart={isMobile ? onTouchStart : undefined}
@@ -676,6 +604,7 @@ const FeaturedProducts = () => {
         </div>
       </div>
 
+      {/* Progress Bar */}
       <div className="mt-6 sm:mt-8 w-full max-w-4xl mx-auto px-4">
         <div className="h-1 bg-gray-200 relative overflow-hidden rounded-full">
           <div
@@ -707,7 +636,7 @@ const FeaturedProducts = () => {
           }
           @media (max-width: 768px) {
             .transform-gpu {
-              perspective: 500px;
+              perspective: 400px;
             }
           }
         `}
