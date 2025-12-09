@@ -1,6 +1,5 @@
 "use client"
 import React from "react";
-import { motion, useSpring } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 const DefaultCursorSVG = () => {
@@ -30,33 +29,11 @@ const DefaultCursorSVG = () => {
 
 export function SmoothCursor({
   cursor = <DefaultCursorSVG />,
-  springConfig = {
-    damping: 45,
-    stiffness: 400,
-    mass: 1,
-    restDelta: 0.001,
-  },
 }) {
   const [isMobile, setIsMobile] = useState(false);
-  const [isEnabled, setIsEnabled] = useState(false); // ⭐ NEW: Delayed enable
-  const lastMousePos = useRef({ x: 0, y: 0 });
-  const velocity = useRef({ x: 0, y: 0 });
-  const lastUpdateTime = useRef(Date.now());
-  const previousAngle = useRef(0);
-  const accumulatedRotation = useRef(0);
-  
-  const cursorX = useSpring(0, springConfig);
-  const cursorY = useSpring(0, springConfig);
-  const rotation = useSpring(0, {
-    ...springConfig,
-    damping: 60,
-    stiffness: 300,
-  });
-  const scale = useSpring(1, {
-    ...springConfig,
-    stiffness: 500,
-    damping: 35,
-  });
+  const [isEnabled, setIsEnabled] = useState(false);
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+  const cursorRef = useRef(null);
 
   // Detect mobile view
   useEffect(() => {
@@ -89,97 +66,41 @@ export function SmoothCursor({
   }, [isMobile]);
 
   useEffect(() => {
-    if (isMobile || !isEnabled) { // ⭐ Only run when enabled
+    if (isMobile || !isEnabled) {
       document.body.style.cursor = "auto";
       return;
     }
 
-    const updateVelocity = (currentPos) => {
-      const currentTime = Date.now();
-      const deltaTime = currentTime - lastUpdateTime.current;
-      if (deltaTime > 0) {
-        velocity.current = {
-          x: (currentPos.x - lastMousePos.current.x) / deltaTime,
-          y: (currentPos.y - lastMousePos.current.y) / deltaTime,
-        };
-      }
-      lastUpdateTime.current = currentTime;
-      lastMousePos.current = currentPos;
-    };
-
-    const smoothMouseMove = (e) => {
-      const currentPos = { x: e.clientX, y: e.clientY };
-      updateVelocity(currentPos);
-      const speed = Math.sqrt(Math.pow(velocity.current.x, 2) + Math.pow(velocity.current.y, 2));
-      
-      cursorX.set(currentPos.x);
-      cursorY.set(currentPos.y);
-      
-      if (speed > 0.1) {
-        const currentAngle = Math.atan2(velocity.current.y, velocity.current.x) * (180 / Math.PI) + 90;
-        let angleDiff = currentAngle - previousAngle.current;
-        if (angleDiff > 180) angleDiff -= 360;
-        if (angleDiff < -180) angleDiff += 360;
-        accumulatedRotation.current += angleDiff;
-        rotation.set(accumulatedRotation.current);
-        previousAngle.current = currentAngle;
-        scale.set(0.95);
-        
-        // ⭐ OPTIMIZATION: Clear previous timeout to avoid memory leaks
-        const timeout = setTimeout(() => {
-          scale.set(1);
-        }, 150);
-        return () => clearTimeout(timeout);
-      }
-    };
-
-    // ⭐ OPTIMIZATION: Use passive event listener
-    let rafId;
-    const throttledMouseMove = (e) => {
-      if (rafId) return;
-      rafId = requestAnimationFrame(() => {
-        smoothMouseMove(e);
-        rafId = null; // ⭐ Changed from 0 to null for clarity
-      });
+    const handleMouseMove = (e) => {
+      setCursorPos({ x: e.clientX, y: e.clientY });
     };
 
     document.body.style.cursor = "none";
-    window.addEventListener("mousemove", throttledMouseMove, { passive: true }); // ⭐ Added passive
+    window.addEventListener("mousemove", handleMouseMove);
     
     return () => {
-      window.removeEventListener("mousemove", throttledMouseMove);
+      window.removeEventListener("mousemove", handleMouseMove);
       document.body.style.cursor = "auto";
-      if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [cursorX, cursorY, rotation, scale, isMobile, isEnabled]); // ⭐ Added isEnabled
+  }, [isMobile, isEnabled]);
 
-  if (isMobile || !isEnabled) { // ⭐ Don't render until enabled
+  if (isMobile || !isEnabled) {
     return null;
   }
 
   return (
-    <motion.div
+    <div
+      ref={cursorRef}
       style={{
         position: "fixed",
-        left: cursorX,
-        top: cursorY,
-        translateX: "-50%",
-        translateY: "-50%",
-        rotate: rotation,
-        scale: scale,
+        left: cursorPos.x,
+        top: cursorPos.y,
+        transform: "translate(-50%, -50%)",
         zIndex: 100,
         pointerEvents: "none",
-        willChange: "transform",
-      }}
-      initial={{ scale: 0 }}
-      animate={{ scale: 1 }}
-      transition={{
-        type: "spring",
-        stiffness: 400,
-        damping: 30,
       }}
     >
       {cursor}
-    </motion.div>
+    </div>
   );
 }
