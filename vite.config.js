@@ -21,14 +21,8 @@ export default defineConfig({
     },
     // Increase chunk size warning limit (default is 500KB)
     chunkSizeWarningLimit: 1000,
-    // Enable minification for smaller bundle
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    // Use default esbuild minifier (built-in, no need to install terser)
+    minify: 'esbuild',
   },
   // Optimize dependencies
   optimizeDeps: {
