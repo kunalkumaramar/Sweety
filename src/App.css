@@ -3,11 +3,11 @@
 * {
   font-family: 'Montserrat', sans-serif;
   box-sizing: border-box;
-  cursor: none !important;
+  cursor: auto;
 }
 
 html, body {
   overflow-x: hidden;
   width: 100%;
-  cursor: none !important;
+  cursor: auto;
 }
