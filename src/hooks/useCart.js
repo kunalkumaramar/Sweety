@@ -1,6 +1,6 @@
 // src/hooks/useCart.js
 import { useSelector, useDispatch } from "react-redux";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   setAuthenticated,
   addToCart,
@@ -488,12 +488,12 @@ export const useCart = () => {
     dispatch(clearErrors());
   }, [dispatch]);
 
-  // Helper functions with better null safety
+  // Helper functions with better null safety - use useMemo to avoid recalculation
   const getCartTotal = useCallback(() => {
     return totals?.total >= 0 ? totals.total : totalPrice || 0;
   }, [totals?.total, totalPrice]);
 
-  const getCartSubtotal = useCallback(() => {
+  const cartSubtotal = useMemo(() => {
     if (totals?.subtotal >= 0) {
       return totals.subtotal;
     }
@@ -506,11 +506,11 @@ export const useCart = () => {
     }, 0);
   }, [totals?.subtotal, items]);
 
-  const getDiscountAmount = useCallback(() => {
+  const discountAmount = useMemo(() => {
     return totals?.discountAmount || 0;
   }, [totals?.discountAmount]);
 
-  const getCartItemCount = useCallback(() => {
+  const cartItemCount = useMemo(() => {
     if (totals?.itemCount >= 0) {
       return totals.itemCount;
     }
@@ -594,13 +594,13 @@ export const useCart = () => {
     cart,
     totals,
     apiItems,
-    totalItems: getCartItemCount(),
+    totalItems: cartItemCount,
     totalPrice: getCartTotal(),
     isAuthenticated,
 
     // Computed values
-    subtotal: getCartSubtotal(),
-    discountAmount: getDiscountAmount(),
+    subtotal: cartSubtotal,
+    discountAmount: discountAmount,
 
     // Loading states
     loading,

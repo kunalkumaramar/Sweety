@@ -1,6 +1,6 @@
 // src/hooks/usePayment.js
 import { useDispatch, useSelector } from 'react-redux';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   initiatePayment,
   processRazorpayPayment,
@@ -210,20 +210,20 @@ export const usePayment = () => {
     return paymentService.getPaymentMethodName(method);
   }, []);
 
-  // Check if payment is in progress
-  const isPaymentInProgress = useCallback(() => {
+  // Memoize state flags for better performance
+  const isPaymentInProgress = useMemo(() => {
     return initiatingPayment || processingPayment || verifyingPayment;
   }, [initiatingPayment, processingPayment, verifyingPayment]);
 
-  // Check if any error exists
-  const hasAnyError = useCallback(() => {
+  // Memoize error checking
+  const hasAnyError = useMemo(() => {
     return !!(error || initiationError || processingError || verificationError || 
               paymentDetailsError || paymentByOrderError || successHandlingError || failureHandlingError);
   }, [error, initiationError, processingError, verificationError, 
       paymentDetailsError, paymentByOrderError, successHandlingError, failureHandlingError]);
 
-  // Get current error message
-  const getCurrentError = useCallback(() => {
+  // Memoize current error message
+  const getCurrentError = useMemo(() => {
     return error || initiationError || processingError || verificationError || 
            paymentDetailsError || paymentByOrderError || successHandlingError || failureHandlingError;
   }, [error, initiationError, processingError, verificationError, 

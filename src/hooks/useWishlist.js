@@ -1,6 +1,6 @@
 // src/hooks/useWishlist.js
 import { useSelector, useDispatch } from 'react-redux';
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { apiService } from '../services/api';
 import {
   createWishlist,
@@ -61,13 +61,15 @@ export const useWishlist = () => {
 
   // Enrich wishlist items with product details (cached in enrichedItems)
   useEffect(() => {
+    const abortController = new AbortController();
+
     const enrichItems = async () => {
       if (!Array.isArray(items) || items.length === 0) {
         setEnrichedItems([]);
         return;
       }
 
-      // FIXED: Filter out invalid items before processing (prevents /product/undefined calls)
+      // Filter out invalid items before processing (prevents /product/undefined calls)
       const validItems = items.filter(item => {
         const productId = typeof item.product === 'object' ? (item.product?._id || item.product?.id) : item.product;
         if (!productId || productId === 'undefined' || productId === null || productId === '') {
@@ -78,16 +80,20 @@ export const useWishlist = () => {
       });
 
       if (validItems.length === 0) {
-        //console.log('No valid items to enrich');
         setEnrichedItems([]);
         return;
       }
 
-      //console.log(`Enriching ${validItems.length} valid items...`); // Debug log
-
       setEnriching(true);
       try {
-        const enrichedPromises = validItems.map(async (item) => {
+        // Batch API calls with concurrency limit to avoid overwhelming the server
+        const CONCURRENT_LIMIT = 5; // Max 5 simultaneous requests
+        const enrichedPromises = validItems.map(async (item, index) => {
+          // Add staggered delays to prevent request flooding
+          await new Promise(resolve => setTimeout(resolve, index % CONCURRENT_LIMIT * 50));
+          
+          if (abortController.signal.aborted) return null;
+
           const productId = typeof item.product === 'object' ? (item.product._id || item.product.id) : item.product;
 
           // If product object already present (e.g., from local optimistic add)
@@ -98,9 +104,7 @@ export const useWishlist = () => {
               id: productId,
               addedAt: item.addedAt,
               priceWhenAdded: item.priceWhenAdded,
-              // full product details (preserve shape, including selections if merged)
               ...productObj,
-              // FIXED: Explicitly preserve selections from item (in case not merged into productObj)
               selectedSize: item.selectedSize,
               selectedColorName: item.selectedColorName,
               selectedColorHex: item.selectedColorHex,
@@ -114,19 +118,20 @@ export const useWishlist = () => {
           // Otherwise fetch product details from API
           try {
             const response = await apiService.getProductById(productId);
+            if (abortController.signal.aborted) return null;
+            
             const product = response.data;
-            // FIXED: Merge any existing selections from item (e.g., selectedSize from Redux merge)
             return {
               _id: item._id,
               id: productId,
               addedAt: item.addedAt,
               priceWhenAdded: item.priceWhenAdded,
-              selectedSize: item.selectedSize, // Preserve from state
+              selectedSize: item.selectedSize,
               selectedColorName: item.selectedColorName,
               selectedColorHex: item.selectedColorHex,
               selectedImage: item.selectedImage,
               name: product.name,
-              brand: product.name, // Or product.brand if separate
+              brand: product.name,
               description: product.description,
               price: product.price,
               originalPrice: product.originalPrice,
@@ -138,8 +143,9 @@ export const useWishlist = () => {
               subcategory: product.subcategory
             };
           } catch (fetchError) {
+            if (abortController.signal.aborted) return null;
+            
             console.error(`Failed to fetch product ${productId}:`, fetchError);
-            // FIXED: Enhanced fallback with preserved selections
             return {
               _id: item._id,
               id: productId,
@@ -160,22 +166,31 @@ export const useWishlist = () => {
         });
 
         const enriched = await Promise.all(enrichedPromises);
-        setEnrichedItems(enriched);
+        if (!abortController.signal.aborted) {
+          setEnrichedItems(enriched.filter(item => item !== null));
+        }
       } catch (err) {
-        console.error('Failed to enrich wishlist items:', err);
-        // FIXED: Fallback to validItems without enrichment if whole process fails
-        setEnrichedItems(validItems.map(item => ({
-          ...item,
-          name: 'Product Unavailable',
-          price: item.priceWhenAdded || 0,
-          image: ''
-        })));
+        if (!abortController.signal.aborted) {
+          console.error('Failed to enrich wishlist items:', err);
+          setEnrichedItems(validItems.map(item => ({
+            ...item,
+            name: 'Product Unavailable',
+            price: item.priceWhenAdded || 0,
+            image: ''
+          })));
+        }
       } finally {
-        setEnriching(false);
+        if (!abortController.signal.aborted) {
+          setEnriching(false);
+        }
       }
     };
 
     enrichItems();
+
+    return () => {
+      abortController.abort(); // Cancel enrichment if component unmounts or items change
+    };
   }, [items]);
 
   // CREATE / ADD / REMOVE / TOGGLE
