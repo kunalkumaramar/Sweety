@@ -3,32 +3,34 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "./Redux/store";
 
-// Pages
+// ✅ CRITICAL: Only import Home (LCP) - keeps initial bundle small
 import Home from "./pages/Home";
-import Products from "./components/Products";
-import ProductDetail from "./components/ProductDetail";
-import Wishlist from "./components/Wishlist";
-import Cart from "./components/cart";
-import UserProfile from "./pages/UserProfile";
-import AboutUs from "./pages/AboutUs";
-import OrderSuccess from "./pages/OrderSuccess";
-import Blogs from "./pages/Blogs";
-import ContactUs from "./pages/ContactUs";
-import SweetyFAQ from "./pages/FAQ";
-import ReturnRefundPolicy from "./pages/ReturnandRefundPolicy";
-import ShippingPolicy from "./pages/ShippingPolicy";
-import TermsCondition from "./pages/Terms&Conditions";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import NotFound from "./pages/NotFound";
+
+// ✅ LAZY LOAD: All other pages to reduce initial bundle size
+const Products = React.lazy(() => import("./components/Products"));
+const ProductDetail = React.lazy(() => import("./components/ProductDetail"));
+const Wishlist = React.lazy(() => import("./components/Wishlist"));
+const Cart = React.lazy(() => import("./components/cart"));
+const UserProfile = React.lazy(() => import("./pages/UserProfile"));
+const AboutUs = React.lazy(() => import("./pages/AboutUs"));
+const OrderSuccess = React.lazy(() => import("./pages/OrderSuccess"));
+const Blogs = React.lazy(() => import("./pages/Blogs"));
+const ContactUs = React.lazy(() => import("./pages/ContactUs"));
+const SweetyFAQ = React.lazy(() => import("./pages/FAQ"));
+const ReturnRefundPolicy = React.lazy(() => import("./pages/ReturnandRefundPolicy"));
+const ShippingPolicy = React.lazy(() => import("./pages/ShippingPolicy"));
+const TermsCondition = React.lazy(() => import("./pages/Terms&Conditions"));
+const PrivacyPolicy = React.lazy(() => import("./pages/PrivacyPolicy"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 // Components
 import ScrollToTop from "./components/ScrollToTop";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import Checkout from "./components/Checkout";
-import GoogleCallback from "./components/GoogleCallback";
 
-// Lazy load SmoothCursor to prevent framer-motion from blocking initial render
+// ✅ LAZY LOAD: Heavy components that might block rendering
+const Checkout = React.lazy(() => import("./components/Checkout"));
+const GoogleCallback = React.lazy(() => import("./components/GoogleCallback"));
 const SmoothCursor = React.lazy(() => import("./components/SmoothCursor").then(m => ({ default: m.SmoothCursor })));
 
 // Context Providers
@@ -36,12 +38,21 @@ import { CartProvider } from "./components/CartContext";
 import { WishlistProvider } from "./components/WishlistContext";
 import "./App.css";
 
+// ✅ OPTIMIZED: Loading fallback - minimal component to reduce TBT
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-gray-400 text-sm">Loading...</div>
+  </div>
+);
+
 // Layout wrapper for pages with Navbar and Footer
 const DefaultLayout = ({ children }) => (
   <div className="font-sans">
     <ScrollToTop />
     <Navbar />
-    {children}
+    <React.Suspense fallback={<LoadingFallback />}>
+      {children}
+    </React.Suspense>
     <Footer />
     <React.Suspense fallback={null}>
       <SmoothCursor />
@@ -53,7 +64,9 @@ const DefaultLayout = ({ children }) => (
 const NotFoundLayout = ({ children }) => (
   <div className="font-sans">
     <ScrollToTop />
-    {children}
+    <React.Suspense fallback={<LoadingFallback />}>
+      {children}
+    </React.Suspense>
     <React.Suspense fallback={null}>
       <SmoothCursor />
     </React.Suspense>
@@ -64,10 +77,10 @@ const NotFoundLayout = ({ children }) => (
 const AppContent = () => {
   return (
     <Routes>
-      {/* Home */}
+      {/* Home - CRITICAL (not lazy loaded) */}
       <Route path="/" element={<DefaultLayout><Home /></DefaultLayout>} />
 
-      {/* Static Pages */}
+      {/* Static Pages - LAZY LOADED */}
       <Route path="/about" element={<DefaultLayout><AboutUs /></DefaultLayout>} />
       <Route path="/faq" element={<DefaultLayout><SweetyFAQ /></DefaultLayout>} />
       <Route path="/contact" element={<DefaultLayout><ContactUs /></DefaultLayout>} />
@@ -76,35 +89,34 @@ const AppContent = () => {
       <Route path="/terms-and-conditions" element={<DefaultLayout><TermsCondition /></DefaultLayout>} />
       <Route path="/privacy-policy" element={<DefaultLayout><PrivacyPolicy /></DefaultLayout>} />
 
-      {/* Product Routes */}
+      {/* Product Routes - LAZY LOADED */}
       <Route path="/products" element={<DefaultLayout><Products /></DefaultLayout>} />
       <Route path="/products/:category" element={<DefaultLayout><Products /></DefaultLayout>} />
       <Route path="/products/:category/:subcategory" element={<DefaultLayout><Products /></DefaultLayout>} />
 
-      {/* Product Details */}
+      {/* Product Details - LAZY LOADED */}
       <Route path="/product/:productId" element={<DefaultLayout><ProductDetail /></DefaultLayout>} />
 
-      {/* Cart & Wishlist */}
+      {/* Cart & Wishlist - LAZY LOADED */}
       <Route path="/cart" element={<DefaultLayout><Cart /></DefaultLayout>} />
       <Route path="/wishlist" element={<DefaultLayout><Wishlist /></DefaultLayout>} />
 
-
-      {/* User Profile */}
+      {/* User Profile - LAZY LOADED */}
       <Route path="/profile" element={<DefaultLayout><UserProfile /></DefaultLayout>} />
 
-      {/* Blogs */}
+      {/* Blogs - LAZY LOADED */}
       <Route path="/blogs" element={<DefaultLayout><Blogs /></DefaultLayout>} />
 
-      {/* Auth Routes */}
+      {/* Auth Routes - LAZY LOADED */}
       <Route path="/auth/google/callback" element={<DefaultLayout><GoogleCallback /></DefaultLayout>} />
       <Route path="/login" element={<DefaultLayout><div>Login Page - Use SignIn Modal Instead</div></DefaultLayout>} />
       <Route path="/register" element={<DefaultLayout><div>Register Page - Use SignIn Modal Instead</div></DefaultLayout>} />
 
-      {/* Checkout */}
+      {/* Checkout - LAZY LOADED */}
       <Route path="/checkout" element={<DefaultLayout><Checkout /></DefaultLayout>} />
       <Route path="/order-success/:orderId" element={<DefaultLayout><OrderSuccess /></DefaultLayout>} />
 
-      {/* Catch-all 404 route */}
+      {/* Catch-all 404 route - LAZY LOADED */}
       <Route path="*" element={<NotFoundLayout><NotFound /></NotFoundLayout>} />
     </Routes>
   );
